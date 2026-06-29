@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/*
+  Design tokens for Universal DB Editor.
+  Theme: dark "terminal panel" aesthetic — this is a developer tool,
+  not a marketing page, so the palette stays quiet and the one accent
+  (signal teal) is reserved for connection/state indicators.
+
+  Day 7 — light theme added. Dark remains the default (it's the
+  product's identity), but every color below is a CSS custom property,
+  so `.light` on <html> swaps the whole palette without touching a
+  single component file. See hooks/useTheme.ts for the toggle logic
+  and index.html for the pre-paint class so there's no flash on load.
+*/
+@theme {
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", monospace;
+
+  --color-canvas: #0b0e14;
+  --color-surface: #11151c;
+  --color-surface-raised: #161b24;
+  --color-border-subtle: #1e2430;
+  --color-border: #262e3b;
+  --color-text: #e5e9f0;
+  --color-text-muted: #7c8696;
+  --color-text-faint: #4b5563;
+  --color-accent: #4dd8c0;
+  --color-accent-soft: #1a3530;
+  --color-danger: #e0606b;
+}
+
+/* Light theme — same roles, light palette. Higher specificity than the
+   :root values @theme emits above, so this wins whenever .light is set. */
+:root.light {
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f0f2f5;
+  --color-border-subtle: #e7eaef;
+  --color-border: #d7dce3;
+  --color-text: #1a202c;
+  --color-text-muted: #5b6472;
+  --color-text-faint: #93a0ae;
+  --color-accent: #0d9a86;
+  --color-accent-soft: #def4ef;
+  --color-danger: #c0303f;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+/* Thin scrollbars to match the dense-tool feel */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}

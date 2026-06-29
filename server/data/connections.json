@@ -1,0 +1,20 @@
+[
+  {
+    "id": "8ec1b7b2-5569-4e4c-8b28-bd3bc59ff018",
+    "name": "test",
+    "type": "sqlite",
+    "encryptedConfig": "f45f9801df4932ee828b18d6:278b4efbb45a7e0e34108a3d83cd24ea:db7f774bfce2bf8a3dc7b22a998c10ff953f4914187840bcf9fde493b3e9b94e6d7d39cad0d6c586dcd0db19e84e4fa8e76a828920738e0b931a0d5c77d580f96c7791098da9",
+    "isFavorite": false,
+    "createdAt": "2026-06-25T11:29:41.719Z",
+    "updatedAt": "2026-06-25T11:29:41.719Z"
+  },
+  {
+    "id": "a5edd0fb-6ebd-425f-8c00-b2b305ac225e",
+    "name": "postgres",
+    "type": "postgresql",
+    "encryptedConfig": "9fee6be548cedd7f0ce2d398:f408b506ef55d610a794e9f917158cd5:03fd5dc91782ec71e160d81588e818b21bdc1c582f95e0e724000c6be12de3b6403827900cb7afd754e74f53cd5af7bd02a14c3134d95d073c555cf7d023be44e952d5bd5f841f4efb1b049156753b5c3f8b2d700da4918da1242fc4a72dc18743407207f460f8ca36d23a41135366540031",
+    "isFavorite": false,
+    "createdAt": "2026-06-29T06:29:17.695Z",
+    "updatedAt": "2026-06-29T06:29:17.695Z"
+  }
+]
