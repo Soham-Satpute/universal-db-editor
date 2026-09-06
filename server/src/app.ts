@@ -17,18 +17,18 @@ dotenv.config();
 /**
  * The configured Express app, with no `listen()` call attached.
  *
- * Split out from index.ts (Day 7) so the test suite — and anything
- * else that wants an in-process app instance, e.g. supertest — can
- * import `app` directly instead of spinning up a real HTTP server
- * on a real port.
+ * Split out from index.ts so the test suite — and anything else that
+ * wants an in-process app instance, e.g. supertest — can import `app`
+ * directly instead of spinning up a real HTTP server on a real port.
  */
 export const app = express();
 
-// Security headers — Day 6 addition
+// Security headers
 app.use(
   helmet({
     // Allow the Vite dev server (localhost:5173) to load resources from this API
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false,
   }),
 );
 

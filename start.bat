@@ -3,19 +3,7 @@ setlocal
 
 cd /d "%~dp0"
 
-:: ── Docker path ──────────────────────────────────────────────────────────────
-where docker >nul 2>&1
-if %errorlevel%==0 (
-    echo Starting Universal DB Editor with Docker Compose...
-    docker compose up --build
-    goto :eof
-)
-
-:: ── Local dev path ────────────────────────────────────────────────────────────
-echo Docker not found. Starting local dev servers instead.
-echo.
-
-:: Warn if npm is missing entirely
+:: Warn if npm is missing
 where npm >nul 2>&1
 if %errorlevel% neq 0 (
     echo ERROR: npm was not found. Install Node.js from https://nodejs.org
@@ -40,7 +28,7 @@ if not exist "server\.env" (
     )
 )
 
-:: Install deps if node_modules is absent (covers fresh-zip case)
+:: Install deps if node_modules is absent (covers fresh-clone case)
 if not exist "server\node_modules" (
     echo Installing server dependencies...
     cd /d "%~dp0server"
@@ -61,8 +49,8 @@ start "Universal DB Editor - Client" cmd /k "cd /d "%~dp0client" && npm run dev"
 
 echo.
 echo Servers starting...
-echo   Client: http://localhost:5173
-echo   Server: http://localhost:3001
+echo   App:    http://localhost:5173
+echo   API:    http://localhost:3001
 echo.
 echo Close the two opened windows to stop the servers.
 

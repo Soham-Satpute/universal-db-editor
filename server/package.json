@@ -4,10 +4,10 @@
   "description": "Backend for Universal DB Editor \u2014 Express + provider pattern for SQLite/PostgreSQL/MongoDB",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev":   "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "vitest run"
+    "test":  "vitest run"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",
