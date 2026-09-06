@@ -1,0 +1,443 @@
+{
+  "info": {
+    "name": "Universal DB Editor API",
+    "description": "REST API for the Universal DB Editor — manage database connections (SQLite, PostgreSQL, MongoDB), browse schemas, run CRUD operations and raw queries, import/export data, manage indexes, and use the Groq-powered AI query assistant.\n\nSet the `base_url` variable (default `http://localhost:3001/api`) and `connId` (a connection id returned from Create Connection) before running most requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3001/api", "type": "string" },
+    { "key": "connId", "value": "", "type": "string", "description": "Connection id — copy from the response of Create Connection" },
+    { "key": "table", "value": "users", "type": "string", "description": "Table / collection name to operate on" },
+    { "key": "recordId", "value": "1", "type": "string", "description": "Primary key / _id of a record" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Connections",
+      "item": [
+        {
+          "name": "List Connections",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/connections", "host": ["{{base_url}}"], "path": ["connections"] }
+          }
+        },
+        {
+          "name": "Create Connection - SQLite (file upload)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "My SQLite DB", "type": "text" },
+                { "key": "type", "value": "sqlite", "type": "text" },
+                { "key": "isFavorite", "value": "false", "type": "text" },
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/connections", "host": ["{{base_url}}"], "path": ["connections"] },
+            "description": "Upload a .sqlite/.sqlite3/.db file. Alternatively omit `file` and send `filePath` as a text field pointing to a path on the server."
+          }
+        },
+        {
+          "name": "Create Connection - PostgreSQL",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Postgres DB\",\n  \"type\": \"postgresql\",\n  \"host\": \"localhost\",\n  \"port\": 5432,\n  \"database\": \"mydb\",\n  \"user\": \"postgres\",\n  \"password\": \"postgres\",\n  \"isFavorite\": false\n}"
+            },
+            "url": { "raw": "{{base_url}}/connections", "host": ["{{base_url}}"], "path": ["connections"] },
+            "description": "You can alternatively supply a single `connectionString` field instead of host/port/database/user/password."
+          }
+        },
+        {
+          "name": "Create Connection - MongoDB",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Mongo DB\",\n  \"type\": \"mongodb\",\n  \"uri\": \"mongodb://localhost:27017/mydb\",\n  \"isFavorite\": false\n}"
+            },
+            "url": { "raw": "{{base_url}}/connections", "host": ["{{base_url}}"], "path": ["connections"] }
+          }
+        },
+        {
+          "name": "Update Connection",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Renamed DB\",\n  \"type\": \"postgresql\",\n  \"host\": \"localhost\",\n  \"port\": 5432,\n  \"database\": \"mydb\",\n  \"user\": \"postgres\",\n  \"isFavorite\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/connections/{{connId}}", "host": ["{{base_url}}"], "path": ["connections", "{{connId}}"] },
+            "description": "Supports the same field shape as Create Connection, plus an optional `file` field (multipart) for SQLite re-upload. Fields left blank (e.g. password/uri) keep their existing stored value."
+          }
+        },
+        {
+          "name": "Delete Connection",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{base_url}}/connections/{{connId}}", "host": ["{{base_url}}"], "path": ["connections", "{{connId}}"] }
+          }
+        },
+        {
+          "name": "Test Connection",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{base_url}}/connections/{{connId}}/test", "host": ["{{base_url}}"], "path": ["connections", "{{connId}}", "test"] }
+          }
+        },
+        {
+          "name": "Toggle Favorite",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": { "raw": "{{base_url}}/connections/{{connId}}/favorite", "host": ["{{base_url}}"], "path": ["connections", "{{connId}}", "favorite"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Explorer",
+      "item": [
+        {
+          "name": "List Tables / Views / Indexes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/explorer/{{connId}}/tables", "host": ["{{base_url}}"], "path": ["explorer", "{{connId}}", "tables"] }
+          }
+        },
+        {
+          "name": "Get Table Schema",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/explorer/{{connId}}/schema/{{table}}", "host": ["{{base_url}}"], "path": ["explorer", "{{connId}}", "schema", "{{table}}"] }
+          }
+        },
+        {
+          "name": "Get Foreign Key Relationships",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/explorer/{{connId}}/relationships", "host": ["{{base_url}}"], "path": ["explorer", "{{connId}}", "relationships"] },
+            "description": "Supported for PostgreSQL and SQLite. Returns an empty array for MongoDB (no FK concept)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Query",
+      "item": [
+        {
+          "name": "Execute Query - SQL",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SELECT * FROM {{table}} LIMIT 10\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/query/{{connId}}", "host": ["{{base_url}}"], "path": ["query", "{{connId}}"] },
+            "description": "Used for SQLite/PostgreSQL connections. Passes through the queryGuard middleware (blocks destructive/multi-statement queries)."
+          }
+        },
+        {
+          "name": "Execute Query - MongoDB",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"db.{{table}}.find({})\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/query/{{connId}}", "host": ["{{base_url}}"], "path": ["query", "{{connId}}"] },
+            "description": "Simplified MongoDB shell syntax. Supported forms:\ndb.collection.find({...})\ndb.collection.findOne({...})\ndb.collection.countDocuments({...})\ndb.collection.aggregate([...])"
+          }
+        },
+        {
+          "name": "Get Query History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/query/{{connId}}/history", "host": ["{{base_url}}"], "path": ["query", "{{connId}}", "history"] }
+          }
+        },
+        {
+          "name": "Clear Query History",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{base_url}}/query/{{connId}}/history", "host": ["{{base_url}}"], "path": ["query", "{{connId}}", "history"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CRUD",
+      "item": [
+        {
+          "name": "List Records (paginated, sortable, searchable)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/crud/{{connId}}/{{table}}?page=1&limit=50&sort=id&order=asc&search=",
+              "host": ["{{base_url}}"],
+              "path": ["crud", "{{connId}}", "{{table}}"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" },
+                { "key": "sort", "value": "id" },
+                { "key": "order", "value": "asc" },
+                { "key": "search", "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Insert Record",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Example\",\n  \"email\": \"example@example.com\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/crud/{{connId}}/{{table}}", "host": ["{{base_url}}"], "path": ["crud", "{{connId}}", "{{table}}"] }
+          }
+        },
+        {
+          "name": "Update Record",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/crud/{{connId}}/{{table}}/{{recordId}}", "host": ["{{base_url}}"], "path": ["crud", "{{connId}}", "{{table}}", "{{recordId}}"] },
+            "description": "Partial updates supported. The primary key column is stripped from the body automatically if present."
+          }
+        },
+        {
+          "name": "Delete Record",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmed\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/crud/{{connId}}/{{table}}/{{recordId}}", "host": ["{{base_url}}"], "path": ["crud", "{{connId}}", "{{table}}", "{{recordId}}"] },
+            "description": "`confirmed: true` is required in the body or the API returns 400."
+          }
+        },
+        {
+          "name": "Bulk Delete (blocked by design)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{base_url}}/crud/{{connId}}/{{table}}", "host": ["{{base_url}}"], "path": ["crud", "{{connId}}", "{{table}}"] },
+            "description": "Always returns 400 — bulk delete without a specific record id is intentionally disabled."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Export",
+      "item": [
+        {
+          "name": "Export Table - CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/export/{{connId}}/{{table}}?format=csv",
+              "host": ["{{base_url}}"],
+              "path": ["export", "{{connId}}", "{{table}}"],
+              "query": [{ "key": "format", "value": "csv" }]
+            }
+          }
+        },
+        {
+          "name": "Export Table - JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/export/{{connId}}/{{table}}?format=json",
+              "host": ["{{base_url}}"],
+              "path": ["export", "{{connId}}", "{{table}}"],
+              "query": [{ "key": "format", "value": "json" }]
+            }
+          }
+        },
+        {
+          "name": "Export Table - SQL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/export/{{connId}}/{{table}}?format=sql",
+              "host": ["{{base_url}}"],
+              "path": ["export", "{{connId}}", "{{table}}"],
+              "query": [{ "key": "format", "value": "sql" }]
+            }
+          }
+        },
+        {
+          "name": "Export Full Database - SQL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/export/{{connId}}?format=sql",
+              "host": ["{{base_url}}"],
+              "path": ["export", "{{connId}}"],
+              "query": [{ "key": "format", "value": "sql" }]
+            }
+          }
+        },
+        {
+          "name": "Export Full Database - JSON",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/export/{{connId}}?format=json",
+              "host": ["{{base_url}}"],
+              "path": ["export", "{{connId}}"],
+              "query": [{ "key": "format", "value": "json" }]
+            },
+            "description": "CSV isn't offered for full-database export (a flat file can't hold multiple tables) — use the per-table endpoint for CSV."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Import",
+      "item": [
+        {
+          "name": "Import Records (CSV or JSON)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/import/{{connId}}/{{table}}", "host": ["{{base_url}}"], "path": ["import", "{{connId}}", "{{table}}"] },
+            "description": "Send a .csv or .json file in the `file` field. JSON must be a top-level array of objects. Bulk inserts row by row, collecting per-row errors (capped at 20 in the response) instead of failing the whole import."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Indexes",
+      "item": [
+        {
+          "name": "List Indexes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/indexes/{{connId}}", "host": ["{{base_url}}"], "path": ["indexes", "{{connId}}"] },
+            "description": "Returns `{ ok, indexes: [], supported: false }` if the provider doesn't support index introspection."
+          }
+        },
+        {
+          "name": "Create Index",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"table\": \"{{table}}\",\n  \"columns\": [\"email\"],\n  \"unique\": true,\n  \"name\": \"idx_{{table}}_email\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/indexes/{{connId}}", "host": ["{{base_url}}"], "path": ["indexes", "{{connId}}"] },
+            "description": "`name` is optional — the provider will generate one if omitted."
+          }
+        },
+        {
+          "name": "Drop Index",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/indexes/{{connId}}/idx_{{table}}_email?table={{table}}",
+              "host": ["{{base_url}}"],
+              "path": ["indexes", "{{connId}}", "idx_{{table}}_email"],
+              "query": [{ "key": "table", "value": "{{table}}" }]
+            },
+            "description": "`table` query param is required for MongoDB, where indexes are scoped per-collection."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Assistant",
+      "item": [
+        {
+          "name": "Autocomplete Query",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SELECT * FROM {{table}} WHERE \",\n  \"table\": \"{{table}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/ai/{{connId}}/autocomplete", "host": ["{{base_url}}"], "path": ["ai", "{{connId}}", "autocomplete"] },
+            "description": "Requires GROQ_API_KEY configured on the server."
+          }
+        },
+        {
+          "name": "Explain Query",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SELECT * FROM {{table}} LIMIT 10\",\n  \"table\": \"{{table}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/ai/{{connId}}/explain", "host": ["{{base_url}}"], "path": ["ai", "{{connId}}", "explain"] }
+          }
+        },
+        {
+          "name": "Fix Query",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"SELCT * FROM {{table}}\",\n  \"error\": \"syntax error at or near \\\"SELCT\\\"\",\n  \"table\": \"{{table}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/ai/{{connId}}/fix", "host": ["{{base_url}}"], "path": ["ai", "{{connId}}", "fix"] }
+          }
+        }
+      ]
+    }
+  ]
+}

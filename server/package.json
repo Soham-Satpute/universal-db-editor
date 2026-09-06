@@ -4,7 +4,7 @@
   "description": "Backend for Universal DB Editor \u2014 Express + provider pattern for SQLite/PostgreSQL/MongoDB",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest run"
@@ -28,9 +28,8 @@
     "@types/node": "^20.14.0",
     "@types/pg": "^8.11.6",
     "@types/supertest": "^6.0.2",
-    "nodemon": "^3.1.4",
     "supertest": "^7.0.0",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.19.1",
     "typescript": "^5.5.4",
     "vitest": "^2.1.4"
   }

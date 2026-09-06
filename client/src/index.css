@@ -1,49 +1,81 @@
 @import "tailwindcss";
 
 /*
-  Design tokens for Universal DB Editor.
-  Theme: dark "terminal panel" aesthetic — this is a developer tool,
-  not a marketing page, so the palette stays quiet and the one accent
-  (signal teal) is reserved for connection/state indicators.
-
-  Day 7 — light theme added. Dark remains the default (it's the
-  product's identity), but every color below is a CSS custom property,
-  so `.light` on <html> swaps the whole palette without touching a
-  single component file. See hooks/useTheme.ts for the toggle logic
-  and index.html for the pre-paint class so there's no flash on load.
+  Design tokens for Universal DB Editor — Uber-Inspired Design Analysis.
+  A black-and-white duet framed by geometric display sans (Inter),
+  accented by a single signature pill shape (radius 999px) on every interactive
+  element, 16px radius on cards/dialogs, 8px on inputs, and 36px on segmented tab toggles.
 */
-@theme {
-  --font-display: "Space Grotesk", "Inter", sans-serif;
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "SF Mono", monospace;
 
-  --color-canvas: #0b0e14;
-  --color-surface: #11151c;
-  --color-surface-raised: #161b24;
-  --color-border-subtle: #1e2430;
-  --color-border: #262e3b;
-  --color-text: #e5e9f0;
-  --color-text-muted: #7c8696;
-  --color-text-faint: #4b5563;
-  --color-accent: #4dd8c0;
-  --color-accent-soft: #1a3530;
-  --color-danger: #e0606b;
+:root {
+  --canvas: #ffffff;
+  --canvas-soft: #efefef;
+  --canvas-softer: #f3f3f3;
+  --surface: #ffffff;
+  --surface-raised: #f7f7f7;
+  --surface-pressed: #e2e2e2;
+  --border: #e2e2e2;
+  --border-subtle: #eeeeee;
+  --ink: #000000;
+  --body: #5e5e5e;
+  --mute: #afafaf;
+  --hairline-mid: #4b4b4b;
+  --primary: #000000;
+  --on-primary: #ffffff;
+  --black-elevated: #282828;
+  --danger: #e02838;
 }
 
-/* Light theme — same roles, light palette. Higher specificity than the
-   :root values @theme emits above, so this wins whenever .light is set. */
-:root.light {
-  --color-canvas: #f6f7f9;
-  --color-surface: #ffffff;
-  --color-surface-raised: #f0f2f5;
-  --color-border-subtle: #e7eaef;
-  --color-border: #d7dce3;
-  --color-text: #1a202c;
-  --color-text-muted: #5b6472;
-  --color-text-faint: #93a0ae;
-  --color-accent: #0d9a86;
-  --color-accent-soft: #def4ef;
-  --color-danger: #c0303f;
+:root.dark {
+  --canvas: #000000;
+  --canvas-soft: #141414;
+  --canvas-softer: #1c1c1c;
+  --surface: #101010;
+  --surface-raised: #181818;
+  --surface-pressed: #262626;
+  --border: #262626;
+  --border-subtle: #1c1c1c;
+  --ink: #ffffff;
+  --body: #a0a0a0;
+  --mute: #707070;
+  --hairline-mid: #8e8e8e;
+  --primary: #ffffff;
+  --on-primary: #000000;
+  --black-elevated: #282828;
+  --danger: #ff4d4f;
+}
+
+@theme {
+  --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", monospace;
+
+  --color-canvas: var(--canvas);
+  --color-canvas-soft: var(--canvas-soft);
+  --color-canvas-softer: var(--canvas-softer);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-pressed: var(--surface-pressed);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+
+  --color-ink: var(--ink);
+  --color-body: var(--body);
+  --color-mute: var(--mute);
+  --color-hairline-mid: var(--hairline-mid);
+
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-black-elevated: var(--black-elevated);
+  --color-danger: var(--danger);
+  --color-link: #0000ee;
+
+  /* Backward-compatible semantic aliases */
+  --color-text: var(--ink);
+  --color-text-muted: var(--body);
+  --color-text-faint: var(--mute);
+  --color-accent: var(--primary);
+  --color-accent-soft: var(--canvas-soft);
 }
 
 html,
@@ -53,14 +85,38 @@ body,
 }
 
 body {
-  background-color: var(--color-canvas);
-  color: var(--color-text);
+  background-color: var(--canvas);
+  color: var(--ink);
   font-family: var(--font-sans);
   transition: background-color 150ms ease, color 150ms ease;
+  letter-spacing: -0.01em;
 }
 
-/* Thin scrollbars to match the dense-tool feel */
+/* Thin scrollbars styled to match the clean aesthetic */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* CodeMirror overrides for seamless fit with the Uber design duet */
+.cm-editor {
+  background-color: var(--surface) !important;
+  color: var(--ink) !important;
+  font-family: var(--font-mono) !important;
+  border-radius: 1rem;
+}
+
+.cm-editor .cm-scroller {
+  font-family: var(--font-mono) !important;
+}
+
+.cm-editor .cm-gutters {
+  background-color: var(--canvas-soft) !important;
+  color: var(--mute) !important;
+  border-right: 1px solid var(--border) !important;
+}
+
+.cm-editor .cm-activeLine,
+.cm-editor .cm-activeLineGutter {
+  background-color: var(--canvas-soft) !important;
 }

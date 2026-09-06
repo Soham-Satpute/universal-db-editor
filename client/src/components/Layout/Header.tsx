@@ -3,13 +3,9 @@ import { useConnectionStore } from "../../store/connectionStore";
 import { useTheme } from "../../hooks/useTheme";
 
 /**
- * Top bar. The connection-status pill on the right is a deliberate
- * signature element: a small dot that will turn live/teal once an
- * actual connection exists (Day 2+). For now it just reflects
- * Zustand's `activeConnectionId`, which is always null on Day 1.
- *
- * Day 7 — the leading hamburger button only renders on <768px (md:hidden)
- * and toggles the sidebar drawer; the theme button toggles dark/light.
+ * Top nav bar styled according to DESIGN (1).md.
+ * Features a high-contrast black-and-white duet, sentence-case display typography,
+ * pill active-connection chip, and circular icon buttons.
  */
 export function Header() {
   const activeConnectionId = useConnectionStore((s) => s.activeConnectionId);
@@ -20,37 +16,45 @@ export function Header() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-surface px-4">
-      <div className="flex items-center gap-2">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-canvas px-4 sm:px-6">
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={toggleSidebar}
           title="Toggle sidebar"
           aria-label="Toggle sidebar"
-          className="-ml-1.5 flex h-7 w-7 items-center justify-center rounded-md text-text-muted hover:bg-surface-raised hover:text-text md:hidden"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-canvas-soft text-ink hover:bg-surface-pressed md:hidden transition-colors"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
           </svg>
         </button>
-        <div className="flex h-5 w-5 items-center justify-center rounded-[4px] bg-accent-soft">
-          <div className="h-2 w-2 rounded-[2px] bg-accent" />
+
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-on-primary font-bold text-xs">
+            U
+          </div>
+          <span className="font-display text-sm sm:text-base font-bold tracking-tight text-ink">
+            Universal DB Editor
+          </span>
         </div>
-        <span className="font-display text-sm font-semibold tracking-wide text-text">
-          Universal DB Editor
-        </span>
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden items-center gap-2 rounded-full border border-border-subtle px-3 py-1 sm:flex">
+        <div className="hidden items-center gap-2 rounded-full border border-border bg-canvas-soft px-3.5 py-1 sm:flex">
           <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              activeConnectionId ? "bg-accent" : "bg-text-faint"
+            className={`h-2 w-2 rounded-full transition-colors ${
+              activeConnectionId ? "bg-primary" : "bg-mute"
             }`}
           />
-          <span className="font-mono text-xs text-text-muted">
-            {activeConnection?.name ?? "no connection"}
+          <span className="font-mono text-xs font-medium text-ink">
+            {activeConnection?.name ?? "No connection"}
           </span>
+          {activeConnection && (
+            <span className="rounded-full bg-surface-pressed px-2 py-0.2 text-[10px] font-medium text-body uppercase">
+              {activeConnection.type}
+            </span>
+          )}
         </div>
 
         <button
@@ -58,7 +62,7 @@ export function Header() {
           onClick={toggleTheme}
           title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
           aria-label="Toggle theme"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-text-muted hover:bg-surface-raised hover:text-text"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-canvas-soft text-ink hover:bg-surface-pressed transition-colors"
         >
           {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
         </button>

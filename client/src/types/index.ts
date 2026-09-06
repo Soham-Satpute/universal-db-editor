@@ -45,3 +45,10 @@ export interface ExplorerTree {
   views: string[];
   indexes: string[];
 }
+
+export interface IndexInfo {
+  name: string;
+  table: string;
+  columns: string[];
+  unique: boolean;
+}

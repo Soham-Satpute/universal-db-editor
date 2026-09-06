@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ChevronDown,
+  ChevronRight,
   Database,
+  Download,
   Edit3,
   FileArchive,
   Leaf,
@@ -20,11 +23,13 @@ import {
   toggleFavorite,
   type ConnectionFormValues,
 } from "../../api/connections";
+import { downloadFullExport } from "../../api/exportImport";
 import { useConnectionStore } from "../../store/connectionStore";
 import type { Connection, DbType } from "../../types";
 import { ConnectionForm } from "./ConnectionForm";
 import { DatabaseTree } from "./DatabaseTree";
-import { Toast, useToast } from "../Toast";
+import { Toast } from "../Toast";
+import { useToast } from "../../hooks/useToast";
 
 const dbMeta: Record<DbType, { label: string; Icon: typeof Database }> = {
   sqlite: { label: "SQLite", Icon: FileArchive },
@@ -75,6 +80,7 @@ export function Sidebar() {
     reloadConnections()
       .catch((error) => showToast({ kind: "error", message: getErrorMessage(error) }))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSave(values: ConnectionFormValues) {
@@ -136,74 +142,84 @@ export function Sidebar() {
     }
   }
 
+  function handleExportDatabase(connectionId: string, format: "sql" | "json") {
+    downloadFullExport(connectionId, format);
+    setOpenMenuId(null);
+  }
+
   return (
     <>
-      {/* Backdrop — mobile only, closes the drawer on tap */}
+      {/* Backdrop for mobile drawer */}
       {sidebarOpen && (
         <div
-          className="fixed inset-x-0 bottom-0 top-12 z-30 bg-black/50 md:hidden"
+          className="fixed inset-x-0 bottom-0 top-14 z-30 bg-black/60 backdrop-blur-sm md:hidden"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
       )}
 
       <aside
-        className={`fixed inset-x-0 bottom-0 top-12 z-40 flex w-80 max-w-[85vw] -translate-x-full flex-col border-r border-border bg-surface transition-transform duration-200 md:static md:inset-auto md:w-80 md:max-w-none md:shrink-0 md:translate-x-0 ${
+        className={`fixed inset-x-0 bottom-0 top-14 z-40 flex w-80 max-w-[85vw] -translate-x-full flex-col border-r border-border bg-canvas transition-transform duration-200 md:static md:inset-auto md:w-80 md:max-w-none md:shrink-0 md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : ""
         }`}
       >
-        <div className="border-b border-border px-4 py-3">
+        {/* Header section with add button */}
+        <div className="border-b border-border px-4 py-3.5">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-[11px] font-medium uppercase text-text-faint">
+            <span className="text-xs font-semibold uppercase tracking-wider text-mute">
               Connections
             </span>
             <button
               type="button"
               onClick={() => setModalConnection(null)}
               title="Add connection"
-              className="flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle text-text-muted hover:border-accent hover:text-accent"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-on-primary hover:opacity-90 transition-opacity"
             >
               <Plus size={15} />
             </button>
           </div>
 
-          <div className="mt-3 min-h-10 rounded-md border border-border-subtle bg-canvas px-3 py-2">
+          {/* Active connection card (card-soft-tinted) */}
+          <div className="mt-3 rounded-2xl border border-border bg-canvas-soft p-3">
             {activeConnection ? (
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-text">{activeConnection.name}</p>
-                  <p className="mt-0.5 text-xs text-text-faint">
+                  <p className="truncate text-sm font-bold text-ink">{activeConnection.name}</p>
+                  <p className="text-xs text-body">
                     {dbMeta[activeConnection.type].label}
                   </p>
                 </div>
-                <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[11px] text-accent">
-                  active
+                <span className="rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-on-primary uppercase tracking-wide">
+                  Active
                 </span>
               </div>
             ) : (
-              <p className="text-sm text-text-muted">No active connection</p>
+              <p className="text-xs text-body">No active connection</p>
             )}
           </div>
         </div>
 
+        {/* Connection List */}
         <div className="flex-1 overflow-y-auto px-3 py-3">
           {loading ? (
-            <div className="flex items-center gap-2 px-2 py-3 text-sm text-text-muted">
-              <Loader2 size={16} className="animate-spin" />
-              Loading connections
+            <div className="flex items-center gap-2 px-2 py-4 text-xs text-body">
+              <Loader2 size={15} className="animate-spin text-ink" />
+              Loading connections…
             </div>
           ) : connections.length === 0 ? (
-            <div className="mt-2 flex flex-col items-center gap-3 rounded-lg border border-dashed border-border-subtle px-4 py-10 text-center">
-              <Database size={20} className="text-text-faint" />
+            <div className="mt-2 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-canvas-soft/40 px-4 py-8 text-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-canvas border border-border-subtle text-body">
+                <Database size={18} />
+              </div>
               <div>
-                <p className="text-sm text-text-muted">No connections yet</p>
-                <p className="mt-1 font-mono text-xs text-text-faint">
-                  add one to get started
+                <p className="text-sm font-semibold text-ink">No connections yet</p>
+                <p className="mt-1 text-xs text-body">
+                  Add one to get started
                 </p>
               </div>
             </div>
           ) : (
-            <ul className="space-y-1">
+            <ul className="space-y-1.5">
               {connections.map((connection) => {
                 const { Icon, label } = dbMeta[connection.type];
                 const isActive = connection.id === activeConnectionId;
@@ -211,30 +227,36 @@ export function Sidebar() {
 
                 return (
                   <li key={connection.id} className="relative">
+                    {/* ex-app-shell-row: active state has left indicator bar */}
                     <button
                       type="button"
-                      onClick={() => setActiveConnection(connection.id)}
-                      className={`grid w-full grid-cols-[auto_1fr_auto_auto] items-center gap-2 rounded-md border px-2 py-2 text-left ${
+                      onClick={() => setActiveConnection(isActive ? null : connection.id)}
+                      aria-expanded={isActive}
+                      className={`grid w-full grid-cols-[auto_auto_1fr_auto] items-center gap-2.5 rounded-xl border-l-4 py-2.5 pl-2.5 pr-14 text-left transition-all ${
                         isActive
-                          ? "border-accent/60 bg-accent-soft"
-                          : "border-transparent hover:border-border-subtle hover:bg-surface-raised"
+                          ? "border-primary bg-canvas-soft text-ink font-medium"
+                          : "border-transparent text-body hover:bg-canvas-soft hover:text-ink"
                       }`}
                     >
-                      <Icon size={16} className={isActive ? "text-accent" : "text-text-faint"} />
+                      {isActive ? (
+                        <ChevronDown size={14} className="text-ink" />
+                      ) : (
+                        <ChevronRight size={14} className="text-mute" />
+                      )}
+                      <Icon size={16} className={isActive ? "text-ink" : "text-body"} />
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-text">
+                        <span className="block truncate text-xs font-semibold text-ink">
                           {connection.name}
                         </span>
-                        <span className="block text-xs text-text-faint">{label}</span>
+                        <span className="block text-[11px] text-body">{label}</span>
                       </span>
-                      {isBusy ? (
-                        <Loader2 size={15} className="animate-spin text-text-muted" />
-                      ) : (
-                        <span className="h-4 w-4" />
+                      {isBusy && (
+                        <Loader2 size={14} className="animate-spin text-ink" />
                       )}
                     </button>
 
-                    <div className="absolute right-2 top-2 flex items-center gap-1">
+                    {/* Actions: Favorite & Kebab */}
+                    <div className="absolute right-2.5 top-2.5 flex items-center gap-1">
                       <button
                         type="button"
                         title="Toggle favorite"
@@ -242,11 +264,11 @@ export function Sidebar() {
                           event.stopPropagation();
                           handleToggleFavorite(connection);
                         }}
-                        className="flex h-6 w-6 items-center justify-center rounded text-text-faint hover:bg-canvas hover:text-accent"
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-mute hover:bg-surface-pressed hover:text-ink transition-colors"
                       >
                         <Star
-                          size={14}
-                          className={connection.isFavorite ? "fill-accent text-accent" : ""}
+                          size={13}
+                          className={connection.isFavorite ? "fill-primary text-primary" : ""}
                         />
                       </button>
                       <button
@@ -256,41 +278,67 @@ export function Sidebar() {
                           event.stopPropagation();
                           setOpenMenuId(openMenuId === connection.id ? null : connection.id);
                         }}
-                        className="flex h-6 w-6 items-center justify-center rounded text-text-faint hover:bg-canvas hover:text-text"
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-mute hover:bg-surface-pressed hover:text-ink transition-colors"
                       >
-                        <MoreVertical size={14} />
+                        <MoreVertical size={13} />
                       </button>
                     </div>
 
+                    {/* Kebab Dropdown Menu (card-elevated) */}
                     {openMenuId === connection.id && (
-                      <div className="absolute right-2 top-9 z-10 w-36 rounded-md border border-border bg-canvas py-1 shadow-xl">
+                      <div className="absolute right-2.5 top-10 z-20 w-52 rounded-2xl border border-border bg-canvas p-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
                         <button
                           type="button"
                           onClick={() => {
                             setModalConnection(connection);
                             setOpenMenuId(null);
                           }}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-muted hover:bg-surface-raised hover:text-text"
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-medium text-ink hover:bg-canvas-soft transition-colors"
                         >
-                          <Edit3 size={14} />
-                          Edit
+                          <Edit3 size={13} />
+                          Edit connection
                         </button>
                         <button
                           type="button"
                           onClick={() => handleTest(connection.id)}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-muted hover:bg-surface-raised hover:text-text"
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-medium text-ink hover:bg-canvas-soft transition-colors"
                         >
-                          <RefreshCw size={14} />
-                          Reconnect
+                          <RefreshCw size={13} />
+                          Test connection
+                        </button>
+                        <div className="my-1 border-t border-border" />
+                        <button
+                          type="button"
+                          onClick={() => handleExportDatabase(connection.id, "sql")}
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-medium text-ink hover:bg-canvas-soft transition-colors"
+                        >
+                          <Download size={13} />
+                          Export database (.sql)
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(connection)}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-surface-raised"
+                          onClick={() => handleExportDatabase(connection.id, "json")}
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-medium text-ink hover:bg-canvas-soft transition-colors"
                         >
-                          <Trash2 size={14} />
-                          Delete
+                          <Download size={13} />
+                          Export database (.json)
                         </button>
+                        <div className="my-1 border-t border-border" />
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(connection)}
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-medium text-danger hover:bg-danger/10 transition-colors"
+                        >
+                          <Trash2 size={13} />
+                          Delete connection
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Inline tree under active connection */}
+                    {isActive && (
+                      <div className="ml-3 mt-1.5 border-l-2 border-border pl-2">
+                        <DatabaseTree nested onError={handleTreeError} />
                       </div>
                     )}
                   </li>
@@ -299,8 +347,6 @@ export function Sidebar() {
             </ul>
           )}
         </div>
-
-        <DatabaseTree onError={handleTreeError} />
 
         {modalConnection !== undefined && (
           <ConnectionForm

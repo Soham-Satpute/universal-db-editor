@@ -1,54 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, X, XCircle } from "lucide-react";
+import type { ToastMessage } from "../hooks/useToast";
 
-export interface ToastMessage {
-  kind: "success" | "error";
-  message: string;
-}
+export type { ToastMessage };
 
 /**
- * Manages a single transient toast: shows it, auto-dismisses after
- * `duration` ms, and restarts the timer if a new toast supersedes one
- * still on screen. One hook instance = one toast slot for that component.
- */
-export function useToast(duration = 3500) {
-  const [toast, setToast] = useState<ToastMessage | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showToast = useCallback(
-    (next: ToastMessage) => {
-      if (timer.current) clearTimeout(timer.current);
-      setToast(next);
-      timer.current = setTimeout(() => setToast(null), duration);
-    },
-    [duration],
-  );
-
-  const dismissToast = useCallback(() => {
-    if (timer.current) clearTimeout(timer.current);
-    setToast(null);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, []);
-
-  return { toast, showToast, dismissToast };
-}
-
-/**
- * Floating, dismissible notification for fire-and-forget outcomes —
- * a connection test passing/failing, a connection being saved or
- * deleted, an import finishing. Anchored bottom-right (bottom-center on
- * small screens) so it never collides with the sidebar drawer or the
- * danger-confirmation modal.
- *
- * Sticky/contextual errors (e.g. "this table failed to load") should
- * stay as inline banners next to the thing that failed — a toast that
- * vanishes on its own is the wrong fit for state the user still needs
- * to act on.
+ * Floating notification styled as ex-toast from DESIGN (1).md.
+ * Features 16px radius (rounded-2xl), Level 3 drop shadow, and crisp typography.
  */
 export function Toast({
   toast,
@@ -60,22 +17,28 @@ export function Toast({
   if (!toast) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 sm:justify-end sm:px-6">
+    <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-4 sm:justify-end sm:px-6">
       <div
         role="status"
-        className="pointer-events-auto flex w-full max-w-sm items-start gap-2 rounded-md border border-border bg-canvas px-3 py-2.5 text-sm shadow-xl"
+        className="pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl border border-border bg-canvas px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.15)] transition-all"
       >
         {toast.kind === "success" ? (
-          <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-accent" />
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary">
+            <CheckCircle2 size={15} />
+          </div>
         ) : (
-          <XCircle size={16} className="mt-0.5 shrink-0 text-danger" />
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-danger/10 text-danger">
+            <XCircle size={15} />
+          </div>
         )}
-        <span className="min-w-0 flex-1 text-text-muted">{toast.message}</span>
+        <span className="min-w-0 flex-1 text-xs font-medium text-ink leading-snug">
+          {toast.message}
+        </span>
         <button
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss notification"
-          className="-mr-1 shrink-0 text-text-faint hover:text-text"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-mute hover:bg-surface-pressed hover:text-ink transition-colors"
         >
           <X size={13} />
         </button>

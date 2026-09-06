@@ -57,6 +57,20 @@ on the SQL providers, used by the explorer routes via an optional
 exactly that: `explorer.ts` calls `provider.listViews?.()` and falls
 back to `[]` for Mongo, which has no concept of views.
 
+The same optional-extension pattern powers index management
+(`src/routes/indexes.ts`'s `IndexCapableProvider` type):
+`listIndexDetails()`, `createIndex(table, columns, options)`, and
+`dropIndex(name, table?)` are all implemented on `SQLiteProvider` and
+`PostgreSQLProvider` (parsing `sqlite_master`/`pg_indexes` output and
+generating quoted `CREATE`/`DROP INDEX` statements respectively) and
+on `MongoProvider` (thin wrappers over `collection.createIndex()` /
+`dropIndex()`, iterated across every collection for the list/detail
+call since Mongo has no single global index catalog). The route
+checks each method with `provider.createIndex?.(...)` and returns
+`{ ok: false, error: "This provider doesn't support ..." }` for any
+provider that doesn't implement it, rather than assuming all three
+always will.
+
 ## The registry
 
 `src/providers/ProviderRegistry.ts` maps a `DbType` string (`"sqlite"
@@ -112,6 +126,40 @@ exception: the query playground needs arbitrary `find` /
 `DatabaseProvider` contract. SQLite and PostgreSQL queries in the
 same route go through `provider.query(sql)` normally.
 
+## AI assistant (`ai.ts`)
+
+The Query Playground's autocomplete/explain/fix buttons are the one
+route file that talks to an external HTTP API instead of a database
+driver. `ai.ts` follows the same `getConnectedProvider()` pattern as
+every other route to reach the target database, then:
+
+1. Calls `buildSchemaContext(provider, focusTable)` — lists every
+   table via `provider.listTables()`, then pulls full column detail
+   (via `provider.getSchema()`) for the focused table plus up to 4
+   more, capping the prompt size regardless of how wide the database
+   is.
+2. Passes that context plus the query text to `callGroq()`, a plain
+   `fetch()` against Groq's OpenAI-compatible `/chat/completions`
+   endpoint (no SDK dependency) with `response_format: json_object`
+   so the response is parsed with `JSON.parse` rather than scraped
+   out of prose.
+3. Returns the parsed field the frontend expects (`suggestion` /
+   `explanation` / `fixedQuery` + `explanation`), falling back to an
+   empty value via `safeJsonParse()` if Groq's output isn't valid
+   JSON for some reason, rather than 500ing on a parse error.
+
+This is intentionally provider-agnostic in the same sense the rest of
+the app is: `buildSchemaContext()` calls only `DatabaseProvider`
+interface methods, so autocomplete/explain/fix work unmodified
+against SQLite, PostgreSQL, or MongoDB — the only per-database
+difference is the `dialectLabel()` string injected into the system
+prompt so the model knows which SQL dialect (or Mongo shell syntax)
+to speak.
+
+Swapping Groq for a different provider (including Anthropic's API)
+only touches `callGroq()` — the schema-context builder and the three
+route handlers around it are provider-agnostic.
+
 ## Security layers
 
 - **Credential encryption** (`utils/encryption.ts`) — AES-256-GCM,
@@ -164,11 +212,21 @@ MySQL support:
 5. **Add a zod schema branch** in `connections.ts`
    (`MySQLConnectionSchema`, added to the `ConnectionSchema`
    discriminated union).
-6. **That's it for the backend.** No route file changes — `crud.ts`,
-   `explorer.ts`, `query.ts`, `export.ts`, and `import.ts` all only
-   ever call methods on the `DatabaseProvider` interface, so they
-   work against MySQL automatically once steps 1–5 are done.
-7. On the frontend, add `"mysql"` to the connection type selector and
+6. **That's it for the backend's core CRUD/query path.** No route
+   file changes — `crud.ts`, `explorer.ts`, `query.ts`, `export.ts`,
+   and `import.ts` all only ever call methods on the
+   `DatabaseProvider` interface, so they work against MySQL
+   automatically once steps 1–5 are done. `indexes.ts` and `ai.ts`
+   work too, just without index management or schema-detail-based AI
+   context until you also add the optional extras below.
+7. **Optional — index management:** implement
+   `listIndexDetails()` / `createIndex()` / `dropIndex()` on
+   `MySQLProvider` (same `IndexCapableProvider` shape
+   `PostgreSQLProvider` uses) to light up `indexes.ts` and the
+   schema tree's Indexes UI for MySQL. Skip this and `indexes.ts`
+   degrades gracefully — it returns `{ indexes: [], supported: false }`
+   rather than erroring.
+8. On the frontend, add `"mysql"` to the connection type selector and
    a matching form in `ConnectionForm.tsx` — the rest of the UI
    (data grid, query playground, schema viewer) is already
    database-agnostic.
@@ -176,12 +234,14 @@ MySQL support:
 ## Known simplification
 
 `getConnectedProvider()` is implemented separately (with near-identical
-bodies) in `crud.ts`, `explorer.ts`, `query.ts`, `export.ts`, and
-`import.ts`, instead of being pulled into one shared module. This was
-a deliberate Day-3-era shortcut to keep each route file readable in
-isolation while the project was still taking shape; a natural Day-8+
-follow-up would be to extract it into a single
-`utils/getConnectedProvider.ts` shared by all five route files.
+bodies) in `crud.ts`, `explorer.ts`, `query.ts`, `export.ts`,
+`import.ts`, `indexes.ts`, and `ai.ts` — seven copies now, not five —
+instead of being pulled into one shared module. This was a deliberate
+Day-3-era shortcut to keep each route file readable in isolation
+while the project was still taking shape; a natural follow-up would
+be to extract it into a single `utils/getConnectedProvider.ts` shared
+by all seven route files. It hasn't caused a bug yet since all seven
+copies stayed in sync by hand, but that's luck, not a guarantee.
 
 ## Data persistence
 

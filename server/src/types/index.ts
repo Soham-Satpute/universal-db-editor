@@ -37,6 +37,18 @@ export interface SchemaInfo {
   columns: ColumnInfo[];
 }
 
+/**
+ * Rich index description used by the index-management UI (create/drop).
+ * The plain listIndexes() on DatabaseProvider only returns names — this
+ * carries enough to render and safely operate on an index.
+ */
+export interface IndexInfo {
+  name: string;
+  table: string;
+  columns: string[];
+  unique: boolean;
+}
+
 export interface QueryOptions {
   page?: number;
   limit?: number;

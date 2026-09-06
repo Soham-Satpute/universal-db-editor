@@ -26,6 +26,12 @@ const dbTypes: Array<{ type: DbType; label: string; Icon: typeof Database }> = [
   { type: "mongodb", label: "MongoDB", Icon: Leaf },
 ];
 
+const POSTGRES_URI_PATTERN = /^postgres(?:ql)?:\/\/\S+$/i;
+
+function looksLikePostgresConnectionString(value: string): boolean {
+  return POSTGRES_URI_PATTERN.test(value.trim());
+}
+
 export function ConnectionForm({ connection, onClose, onSave, onTest }: ConnectionFormProps) {
   const initial = useMemo<ConnectionFormValues>(
     () => ({
@@ -81,212 +87,248 @@ export function ConnectionForm({ connection, onClose, onSave, onTest }: Connecti
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      {/* ex-modal-card: 16px radius, Level 2 drop shadow */}
       <form
         onSubmit={handleSubmit}
-        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-border bg-canvas shadow-[0_8px_32px_rgba(0,0,0,0.2)]"
       >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div>
-            <h2 className="font-display text-base font-semibold text-text">
+            <h2 className="font-display text-base sm:text-lg font-bold text-ink">
               {connection ? "Edit connection" : "New connection"}
             </h2>
-            <p className="mt-1 text-xs text-text-muted">
-              Credentials are stored encrypted on the server.
+            <p className="mt-0.5 text-xs text-body">
+              Credentials are encrypted at rest on the server.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:bg-surface-raised hover:text-text"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-canvas-soft text-body hover:bg-surface-pressed hover:text-ink transition-colors"
             aria-label="Close"
           >
-            <X size={17} />
+            <X size={16} />
           </button>
         </div>
 
-        <div className="space-y-5 overflow-y-auto px-5 py-5">
-          <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+        <div className="space-y-4 overflow-y-auto px-6 py-5">
+          {/* Name and Favorite */}
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
             <label className="block">
-              <span className="text-xs font-medium uppercase text-text-faint">Name</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-mute">Name</span>
               <input
                 required
                 value={values.name}
                 onChange={(event) => setField("name", event.target.value)}
-                className="mt-1 h-10 w-full rounded-md border border-border bg-canvas px-3 text-sm outline-none focus:border-accent"
-                placeholder="Local analytics"
+                className="mt-1.5 h-10 w-full rounded-lg border border-transparent bg-canvas-soft px-3.5 text-sm text-ink outline-none transition-all placeholder:text-mute focus:border-ink focus:bg-canvas"
+                placeholder="Production analytics"
               />
             </label>
 
-            <label className="mt-5 flex h-10 items-center gap-2 rounded-md border border-border px-3 text-sm text-text-muted">
+            <label className="mt-6 flex h-10 cursor-pointer items-center gap-2 rounded-full border border-border bg-canvas-soft px-4 text-xs font-medium text-ink transition-colors hover:bg-surface-pressed">
               <input
                 type="checkbox"
                 checked={values.isFavorite}
                 onChange={(event) => setField("isFavorite", event.target.checked)}
-                className="accent-accent"
+                className="sr-only"
               />
-              <Star size={15} className={values.isFavorite ? "fill-accent text-accent" : ""} />
-              Favorite
+              <Star
+                size={14}
+                className={values.isFavorite ? "fill-primary text-primary" : "text-mute"}
+              />
+              <span>Favorite</span>
             </label>
           </div>
 
+          {/* Database Type Segmented Pill */}
           <div>
-            <span className="text-xs font-medium uppercase text-text-faint">Database type</span>
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              {dbTypes.map(({ type, label, Icon }) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setField("type", type)}
-                  className={`flex h-10 items-center justify-center gap-2 rounded-md border text-sm ${
-                    values.type === type
-                      ? "border-accent bg-accent-soft text-text"
-                      : "border-border bg-canvas text-text-muted hover:border-border hover:bg-surface-raised"
-                  }`}
-                >
-                  <Icon size={16} />
-                  {label}
-                </button>
-              ))}
+            <span className="text-xs font-semibold uppercase tracking-wider text-mute">Database type</span>
+            <div className="mt-1.5 flex gap-1 rounded-[36px] bg-canvas-soft p-1">
+              {dbTypes.map(({ type, label, Icon }) => {
+                const isSelected = values.type === type;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setField("type", type)}
+                    className={`flex flex-1 items-center justify-center gap-2 rounded-full py-2 text-xs font-medium transition-all ${
+                      isSelected
+                        ? "bg-primary text-on-primary shadow-sm"
+                        : "text-body hover:bg-surface-pressed hover:text-ink"
+                    }`}
+                  >
+                    <Icon size={14} />
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
+          {/* SQLite Form Fields */}
           {values.type === "sqlite" && (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-3.5 pt-1">
               <label className="block">
-                <span className="text-xs font-medium uppercase text-text-faint">Upload file</span>
-                <input
-                  type="file"
-                  accept=".sqlite,.sqlite3,.db"
-                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setField("file", event.target.files?.[0] ?? null)
-                  }
-                  className="mt-1 block w-full rounded-md border border-border bg-canvas px-3 py-2 text-sm text-text-muted file:mr-3 file:rounded file:border-0 file:bg-accent-soft file:px-3 file:py-1 file:text-text"
-                />
+                <span className="text-xs font-semibold uppercase tracking-wider text-mute">Upload SQLite database</span>
+                <div className="mt-1.5 flex items-center rounded-lg border border-border bg-canvas-soft p-2.5">
+                  <input
+                    type="file"
+                    accept=".sqlite,.sqlite3,.db"
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setField("file", event.target.files?.[0] ?? null)
+                    }
+                    className="w-full text-xs text-body file:mr-3 file:rounded-full file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:font-medium file:text-on-primary hover:file:opacity-90"
+                  />
+                </div>
               </label>
+
               <label className="block">
-                <span className="text-xs font-medium uppercase text-text-faint">File path</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-mute">Or specify file path</span>
                 <input
                   value={values.filePath ?? ""}
                   onChange={(event) => setField("filePath", event.target.value)}
-                  className="mt-1 h-10 w-full rounded-md border border-border bg-canvas px-3 text-sm outline-none focus:border-accent"
-                  placeholder="C:\\data\\app.db"
+                  className="mt-1.5 h-10 w-full rounded-lg border border-transparent bg-canvas-soft px-3.5 text-sm text-ink outline-none transition-all placeholder:text-mute focus:border-ink focus:bg-canvas"
+                  placeholder="C:\data\analytics.db"
                 />
               </label>
             </div>
           )}
 
+          {/* PostgreSQL Form Fields */}
           {values.type === "postgresql" && (
-            <div className="space-y-4">
-              <label className="flex w-fit items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-text-muted">
+            <div className="space-y-3.5 pt-1">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-canvas-soft px-3.5 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-surface-pressed">
                 <input
                   type="checkbox"
                   checked={useConnectionString}
                   onChange={(event) => setUseConnectionString(event.target.checked)}
-                  className="accent-accent"
+                  className="rounded border-border text-primary focus:ring-0"
                 />
                 Use connection string
               </label>
 
               {useConnectionString ? (
                 <label className="block">
-                  <span className="text-xs font-medium uppercase text-text-faint">
-                    Connection string
-                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-mute">Connection string</span>
                   <input
                     value={values.connectionString ?? ""}
                     onChange={(event) => setField("connectionString", event.target.value)}
-                    className="mt-1 h-10 w-full rounded-md border border-border bg-canvas px-3 text-sm outline-none focus:border-accent"
-                    placeholder="postgresql://user:password@localhost:5432/dbname"
+                    className="mt-1.5 h-10 w-full rounded-lg border border-transparent bg-canvas-soft px-3.5 text-sm text-ink outline-none transition-all placeholder:text-mute focus:border-ink focus:bg-canvas"
+                    placeholder="postgresql://user:password@localhost:5432/database"
                   />
                 </label>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    <label className="block flex-1">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-mute">Host</span>
+                      <input
+                        value={values.host ?? ""}
+                        onChange={(event) => {
+                          const nextValue = event.target.value;
+                          if (looksLikePostgresConnectionString(nextValue)) {
+                            setField("connectionString", nextValue.trim());
+                            setUseConnectionString(true);
+                            return;
+                          }
+                          setField("host", nextValue);
+                        }}
+                        className="mt-1.5 h-10 w-full rounded-lg border border-transparent bg-canvas-soft px-3.5 text-sm text-ink outline-none transition-all placeholder:text-mute focus:border-ink focus:bg-canvas"
+                        placeholder="localhost"
+                      />
+                    </label>
+
+                    <label className="block w-24 shrink-0">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-mute">Port</span>
+                      <input
+                        type="number"
+                        value={values.port ?? 5432}
+                        onChange={(event) => setField("port", Number(event.target.value))}
+                        className="mt-1.5 h-10 w-full rounded-lg border border-transparent bg-canvas-soft px-3.5 text-sm text-ink outline-none transition-all focus:border-ink focus:bg-canvas"
+                      />
+                    </label>
+                  </div>
+
                   <label className="block">
-                    <span className="text-xs font-medium uppercase text-text-faint">Host</span>
-                    <input
-                      value={values.host ?? ""}
-                      onChange={(event) => setField("host", event.target.value)}
-                      className="mt-1 h-10 w-full rounded-md border border-border bg-canvas px-3 text-sm outline-none focus:border-accent"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="text-xs font-medium uppercase text-text-faint">Port</span>
-                    <input
-                      type="number"
-                      value={values.port ?? 5432}
-                      onChange={(event) => setField("port", Number(event.target.value))}
-                      className="mt-1 h-10 w-full rounded-md border border-border bg-canvas px-3 text-sm outline-none focus:border-accent"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="text-xs font-medium uppercase text-text-faint">Database</span>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-mute">Database name</span>
                     <input
                       value={values.database ?? ""}
                       onChange={(event) => setField("database", event.target.value)}
-                      className="mt-1 h-10 w-full rounded-md border border-border bg-canvas px-3 text-sm outline-none focus:border-accent"
+                      className="mt-1.5 h-10 w-full rounded-lg border border-transparent bg-canvas-soft px-3.5 text-sm text-ink outline-none transition-all placeholder:text-mute focus:border-ink focus:bg-canvas"
+                      placeholder="postgres"
                     />
                   </label>
-                  <label className="block">
-                    <span className="text-xs font-medium uppercase text-text-faint">User</span>
-                    <input
-                      value={values.user ?? ""}
-                      onChange={(event) => setField("user", event.target.value)}
-                      className="mt-1 h-10 w-full rounded-md border border-border bg-canvas px-3 text-sm outline-none focus:border-accent"
-                    />
-                  </label>
-                  <label className="block sm:col-span-2">
-                    <span className="text-xs font-medium uppercase text-text-faint">Password</span>
-                    <input
-                      type="password"
-                      value={values.password ?? ""}
-                      onChange={(event) => setField("password", event.target.value)}
-                      className="mt-1 h-10 w-full rounded-md border border-border bg-canvas px-3 text-sm outline-none focus:border-accent"
-                    />
-                  </label>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-mute">User</span>
+                      <input
+                        value={values.user ?? ""}
+                        onChange={(event) => setField("user", event.target.value)}
+                        className="mt-1.5 h-10 w-full rounded-lg border border-transparent bg-canvas-soft px-3.5 text-sm text-ink outline-none transition-all placeholder:text-mute focus:border-ink focus:bg-canvas"
+                        placeholder="postgres"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-mute">Password</span>
+                      <input
+                        type="password"
+                        value={values.password ?? ""}
+                        onChange={(event) => setField("password", event.target.value)}
+                        className="mt-1.5 h-10 w-full rounded-lg border border-transparent bg-canvas-soft px-3.5 text-sm text-ink outline-none transition-all focus:border-ink focus:bg-canvas"
+                      />
+                    </label>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
+          {/* MongoDB Form Fields */}
           {values.type === "mongodb" && (
-            <label className="block">
-              <span className="text-xs font-medium uppercase text-text-faint">MongoDB URI</span>
-              <input
-                value={values.uri ?? ""}
-                onChange={(event) => setField("uri", event.target.value)}
-                className="mt-1 h-10 w-full rounded-md border border-border bg-canvas px-3 text-sm outline-none focus:border-accent"
-                placeholder="mongodb://localhost:27017/app"
-              />
-            </label>
+            <div className="pt-1">
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wider text-mute">MongoDB URI</span>
+                <input
+                  value={values.uri ?? ""}
+                  onChange={(event) => setField("uri", event.target.value)}
+                  className="mt-1.5 h-10 w-full rounded-lg border border-transparent bg-canvas-soft px-3.5 text-sm text-ink outline-none transition-all placeholder:text-mute focus:border-ink focus:bg-canvas"
+                  placeholder="mongodb://localhost:27017/analytics"
+                />
+              </label>
+            </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-border px-5 py-4">
+        {/* Action Buttons: Pill Hierarchy */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-canvas px-6 py-4">
           <button
             type="button"
             onClick={handleTest}
             disabled={!connection?.id || testing}
-            className="flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm text-text-muted hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-9 items-center gap-2 rounded-full border border-border bg-canvas px-4 text-xs font-medium text-ink transition-colors hover:bg-canvas-soft disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {testing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-            Test Connection
+            {testing ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+            <span>Test connection</span>
           </button>
-          <div className="flex items-center gap-2">
+
+          <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="h-9 rounded-md px-3 text-sm text-text-muted hover:bg-surface-raised"
+              className="h-9 rounded-full bg-canvas-soft px-4 text-xs font-medium text-body hover:bg-surface-pressed hover:text-ink transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-canvas disabled:opacity-70"
+              className="flex h-9 items-center gap-2 rounded-full bg-primary px-6 text-xs font-semibold text-on-primary shadow-sm hover:opacity-90 disabled:opacity-50 transition-all"
             >
-              {saving && <Loader2 size={16} className="animate-spin" />}
-              Save
+              {saving && <Loader2 size={14} className="animate-spin" />}
+              Save connection
             </button>
           </div>
         </div>

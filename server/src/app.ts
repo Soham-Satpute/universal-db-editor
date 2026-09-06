@@ -9,6 +9,8 @@ import queryRouter from "./routes/query";
 import crudRouter from "./routes/crud";
 import exportRouter from "./routes/export";
 import importRouter from "./routes/import";
+import aiRouter from "./routes/ai";
+import indexesRouter from "./routes/indexes";
 
 dotenv.config();
 
@@ -39,6 +41,8 @@ app.use("/api/query", queryRouter);
 app.use("/api/crud", crudRouter);
 app.use("/api/export", exportRouter);
 app.use("/api/import", importRouter);
+app.use("/api/ai", aiRouter);
+app.use("/api/indexes", indexesRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "universal-db-editor-server" });

@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { BaseProvider } from "./BaseProvider";
 import {
   ConnectionConfig,
+  IndexInfo,
   PaginatedResult,
   QueryOptions,
   QueryResult,
@@ -61,6 +62,57 @@ export class SQLiteProvider extends BaseProvider {
       )
       .all() as Array<{ name: string }>;
     return rows.map((row) => row.name);
+  }
+
+  /**
+   * Richer index listing (table + columns + unique flag) used by the
+   * index-management UI. sqlite_master gives us name+table directly;
+   * PRAGMA index_info/index_list fill in columns and uniqueness.
+   */
+  async listIndexDetails(): Promise<IndexInfo[]> {
+    this.assertConnected();
+    const idxRows = this.db!
+      .prepare(
+        "SELECT name, tbl_name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+      )
+      .all() as Array<{ name: string; tbl_name: string }>;
+
+    const result: IndexInfo[] = [];
+    for (const { name, tbl_name: table } of idxRows) {
+      const columnRows = this.db!
+        .prepare(`PRAGMA index_info(${quoteIdentifier(name)})`)
+        .all() as Array<{ name: string }>;
+      const listRows = this.db!
+        .prepare(`PRAGMA index_list(${quoteIdentifier(table)})`)
+        .all() as Array<{ name: string; unique: number }>;
+      const unique = listRows.find((row) => row.name === name)?.unique === 1;
+
+      result.push({ name, table, columns: columnRows.map((c) => c.name), unique });
+    }
+    return result;
+  }
+
+  async createIndex(
+    table: string,
+    columns: string[],
+    options?: { unique?: boolean; name?: string },
+  ): Promise<string> {
+    this.assertConnected();
+    if (columns.length === 0) throw new Error("At least one column is required");
+
+    const indexName = options?.name?.trim() || `idx_${table}_${columns.join("_")}`;
+    const uniqueSql = options?.unique ? "UNIQUE " : "";
+    const colList = columns.map(quoteIdentifier).join(", ");
+
+    this.db!.exec(
+      `CREATE ${uniqueSql}INDEX ${quoteIdentifier(indexName)} ON ${quoteIdentifier(table)} (${colList})`,
+    );
+    return indexName;
+  }
+
+  async dropIndex(name: string): Promise<void> {
+    this.assertConnected();
+    this.db!.exec(`DROP INDEX ${quoteIdentifier(name)}`);
   }
 
   async getSchema(table: string): Promise<SchemaInfo> {

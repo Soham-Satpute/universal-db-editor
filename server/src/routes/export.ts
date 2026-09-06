@@ -199,4 +199,113 @@ router.get("/:connId/:table", async (req: Request, res: Response): Promise<void>
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /api/export/:connId?format=json|sql
+// Full-database dump: every table/collection in one file. CSV isn't
+// offered here (a single flat file can't hold multiple tables sensibly);
+// use the per-table endpoint above for CSV.
+// ---------------------------------------------------------------------------
+router.get("/:connId", async (req: Request, res: Response): Promise<void> => {
+  const { connId } = req.params;
+  const format = (req.query.format as string) || "sql";
+
+  if (!["json", "sql"].includes(format)) {
+    res.status(400).json({ ok: false, error: "format must be json or sql" });
+    return;
+  }
+
+  let provider: DatabaseProvider;
+  let connName: string;
+  try {
+    const resolved = await getConnectedProvider(connId);
+    provider = resolved.provider;
+    connName = resolved.name;
+  } catch (err) {
+    sendError(res, err);
+    return;
+  }
+
+  let tables: string[];
+  try {
+    tables = await provider.listTables();
+  } catch (err) {
+    sendError(res, err);
+    return;
+  }
+
+  const safeName = connName.replace(/[^a-zA-Z0-9_-]/g, "_") || "database";
+  const filename = `${safeName}_full_export.${format}`;
+
+  // ---------- SQL (whole database) -----------------------------------------
+  if (format === "sql") {
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.write(
+      `-- Full database export: ${connName}\n` +
+        `-- Tables: ${tables.length}\n` +
+        `-- Generated: ${new Date().toISOString()}\n\n`,
+    );
+
+    try {
+      for (const table of tables) {
+        res.write(
+          `-- ---------------------------------------------------------\n` +
+            `-- Table: ${table}\n` +
+            `-- ---------------------------------------------------------\n`,
+        );
+        let wroteAnyRow = false;
+        await streamRows(provider, table, (rows) => {
+          for (const row of rows) {
+            wroteAnyRow = true;
+            const cols = Object.keys(row);
+            const colList = cols.map(quoteIdent).join(", ");
+            const valList = cols.map((col) => escSql(row[col])).join(", ");
+            res.write(`INSERT INTO ${quoteIdent(table)} (${colList}) VALUES (${valList});\n`);
+          }
+        });
+        if (!wroteAnyRow) res.write("-- (no rows)\n");
+        res.write("\n");
+      }
+    } catch (err) {
+      sendError(res, err);
+      return;
+    }
+
+    res.end();
+    return;
+  }
+
+  // ---------- JSON (whole database) -----------------------------------------
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+  res.write("{\n");
+  let firstTable = true;
+
+  try {
+    for (const table of tables) {
+      if (!firstTable) res.write(",\n");
+      firstTable = false;
+      res.write(`${JSON.stringify(table)}: [\n`);
+
+      let firstRow = true;
+      await streamRows(provider, table, (rows) => {
+        for (const row of rows) {
+          if (!firstRow) res.write(",\n");
+          res.write(JSON.stringify(row));
+          firstRow = false;
+        }
+      });
+
+      res.write("\n]");
+    }
+  } catch (err) {
+    sendError(res, err);
+    return;
+  }
+
+  res.write("\n}\n");
+  res.end();
+});
+
 export default router;

@@ -55,7 +55,10 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
       activeTable: null,
       activeView: "data",
       explorerTree: null,
-      sidebarOpen: false,
+      // Note: sidebarOpen is intentionally left alone here. Expanding a
+      // connection now reveals its table tree inline (see Sidebar.tsx),
+      // so auto-closing the mobile drawer would hide it immediately.
+      // The drawer closes once a table is actually picked, below.
     }),
 
   setActiveTable: (table) => set({ activeTable: table, activeView: "data", sidebarOpen: false }),

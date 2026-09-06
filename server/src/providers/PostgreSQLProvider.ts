@@ -2,6 +2,7 @@ import { Pool } from "pg";
 import { BaseProvider } from "./BaseProvider";
 import {
   ConnectionConfig,
+  IndexInfo,
   PaginatedResult,
   QueryOptions,
   QueryResult,
@@ -65,6 +66,55 @@ export class PostgreSQLProvider extends BaseProvider {
       "SELECT indexname FROM pg_indexes WHERE schemaname = 'public' ORDER BY indexname",
     );
     return rows.map((row) => row.indexname);
+  }
+
+  /**
+   * Richer index listing (table + columns + unique flag) used by the
+   * index-management UI. pg_indexes' `indexdef` already has the full
+   * CREATE INDEX statement — parse the column list and UNIQUE keyword
+   * out of it rather than joining pg_index/pg_attribute.
+   */
+  async listIndexDetails(): Promise<IndexInfo[]> {
+    this.assertConnected();
+    const { rows } = await this.pool!.query<{
+      indexname: string;
+      tablename: string;
+      indexdef: string;
+    }>(
+      "SELECT indexname, tablename, indexdef FROM pg_indexes WHERE schemaname = 'public' ORDER BY indexname",
+    );
+
+    return rows.map((row) => {
+      const unique = /CREATE UNIQUE INDEX/i.test(row.indexdef);
+      const colMatch = row.indexdef.match(/\(([^)]+)\)/);
+      const columns = colMatch
+        ? colMatch[1].split(",").map((c) => c.trim().replace(/"/g, ""))
+        : [];
+      return { name: row.indexname, table: row.tablename, columns, unique };
+    });
+  }
+
+  async createIndex(
+    table: string,
+    columns: string[],
+    options?: { unique?: boolean; name?: string },
+  ): Promise<string> {
+    this.assertConnected();
+    if (columns.length === 0) throw new Error("At least one column is required");
+
+    const indexName = options?.name?.trim() || `idx_${table}_${columns.join("_")}`;
+    const uniqueSql = options?.unique ? "UNIQUE " : "";
+    const colList = columns.map(quoteIdentifier).join(", ");
+
+    await this.pool!.query(
+      `CREATE ${uniqueSql}INDEX ${quoteIdentifier(indexName)} ON ${quoteIdentifier(table)} (${colList})`,
+    );
+    return indexName;
+  }
+
+  async dropIndex(name: string): Promise<void> {
+    this.assertConnected();
+    await this.pool!.query(`DROP INDEX ${quoteIdentifier(name)}`);
   }
 
   async getSchema(table: string): Promise<SchemaInfo> {

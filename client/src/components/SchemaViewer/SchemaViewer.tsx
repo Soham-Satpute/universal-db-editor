@@ -3,7 +3,7 @@ import { EditorState } from "@codemirror/state";
 import { EditorView, lineNumbers, highlightActiveLine } from "@codemirror/view";
 import { sql } from "@codemirror/lang-sql";
 import { oneDark } from "@codemirror/theme-one-dark";
-import { AlertCircle, Copy, Loader2 } from "lucide-react";
+import { AlertCircle, Copy, Loader2, Check } from "lucide-react";
 import { fetchTableSchema } from "../../api/explorer";
 import type { ColumnInfo, SchemaInfo } from "../../types";
 
@@ -21,7 +21,6 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Failed to load schema";
 }
 
-/** Generate a CREATE TABLE DDL string from SchemaInfo */
 function buildDDL(schema: SchemaInfo): string {
   const cols = schema.columns
     .map((col) => {
@@ -36,40 +35,40 @@ function buildDDL(schema: SchemaInfo): string {
   return `CREATE TABLE "${schema.table}" (\n${cols}\n);`;
 }
 
-/** Render a MongoDB-style inferred field list */
 function MongoSchemaTable({ columns }: { columns: ColumnInfo[] }) {
   return (
     <div className="overflow-auto p-4">
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="pb-2 pr-6 text-left font-mono text-[11px] uppercase text-text-faint">Field</th>
-            <th className="pb-2 pr-6 text-left font-mono text-[11px] uppercase text-text-faint">Inferred type</th>
-            <th className="pb-2 text-left font-mono text-[11px] uppercase text-text-faint">Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          {columns.map((col) => (
-            <tr key={col.name} className="border-b border-border-subtle hover:bg-surface-raised">
-              <td className="py-2 pr-6 font-mono text-sm text-text">
-                {col.name}
-                {col.isPrimaryKey && (
-                  <span className="ml-2 rounded border border-accent/30 px-1 py-0.5 text-[9px] uppercase text-accent">pk</span>
-                )}
-              </td>
-              <td className="py-2 pr-6 font-mono text-sm text-text-muted">{col.type}</td>
-              <td className="py-2 text-xs text-text-faint">
-                {col.nullable === false ? "required" : "optional"}
-              </td>
+      <div className="rounded-2xl border border-border overflow-hidden bg-canvas">
+        <table className="w-full border-collapse text-xs">
+          <thead className="bg-canvas-soft border-b border-border">
+            <tr>
+              <th className="px-4 py-3 text-left font-mono text-[11px] uppercase tracking-wider text-body">Field</th>
+              <th className="px-4 py-3 text-left font-mono text-[11px] uppercase tracking-wider text-body">Inferred type</th>
+              <th className="px-4 py-3 text-left font-mono text-[11px] uppercase tracking-wider text-body">Constraint</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {columns.map((col) => (
+              <tr key={col.name} className="border-b border-border last:border-b-0 hover:bg-canvas-soft/60 transition-colors">
+                <td className="px-4 py-2.5 font-mono text-xs text-ink font-medium">
+                  {col.name}
+                  {col.isPrimaryKey && (
+                    <span className="ml-2 rounded-full bg-primary px-1.5 py-0.2 text-[9px] uppercase font-semibold text-on-primary">pk</span>
+                  )}
+                </td>
+                <td className="px-4 py-2.5 font-mono text-xs text-body">{col.type}</td>
+                <td className="px-4 py-2.5 font-mono text-xs text-mute">
+                  {col.nullable === false ? "required" : "optional"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
-/** Read-only CodeMirror DDL viewer */
 function DDLViewer({ ddl }: { ddl: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -105,19 +104,21 @@ function DDLViewer({ ddl }: { ddl: string }) {
   }
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-2">
-        <span className="font-mono text-[11px] uppercase text-text-faint">DDL</span>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-text-muted hover:bg-surface-raised hover:text-text"
-        >
-          <Copy size={13} />
-          {copied ? "Copied!" : "Copy"}
-        </button>
+    <div className="flex flex-1 flex-col overflow-hidden p-4">
+      <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-canvas">
+        <div className="flex items-center justify-between border-b border-border bg-canvas-soft px-4 py-2.5">
+          <span className="text-xs font-semibold uppercase tracking-wider text-mute">DDL statement</span>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 rounded-full border border-border bg-canvas px-3.5 py-1 text-xs font-medium text-ink hover:bg-surface-pressed transition-colors"
+          >
+            {copied ? <Check size={13} className="text-primary" /> : <Copy size={13} />}
+            <span>{copied ? "Copied" : "Copy"}</span>
+          </button>
+        </div>
+        <div ref={containerRef} className="flex-1 overflow-hidden" />
       </div>
-      <div ref={containerRef} className="flex-1 overflow-hidden" />
     </div>
   );
 }
@@ -143,14 +144,14 @@ export function SchemaViewer({ connectionId, table, dbType }: SchemaViewerProps)
   return (
     <main className="flex flex-1 flex-col overflow-hidden bg-canvas">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border bg-surface px-4 py-2.5">
-        <h1 className="font-display text-sm font-semibold text-text">{table}</h1>
-        <span className="font-mono text-xs text-text-faint">
-          {isMongo ? "collection schema" : "table schema"}
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-border bg-canvas px-4 py-3">
+        <h1 className="font-display text-base font-bold text-ink tracking-tight">{table}</h1>
+        <span className="rounded-full bg-canvas-soft px-2.5 py-0.5 font-mono text-xs font-medium text-body">
+          {isMongo ? "Collection schema" : "Table schema"}
         </span>
         {schema && (
-          <span className="font-mono text-xs text-text-faint">
-            · {schema.columns.length} {isMongo ? "fields" : "columns"}
+          <span className="rounded-full bg-canvas-soft px-2.5 py-0.5 font-mono text-xs font-medium text-body">
+            {schema.columns.length} {isMongo ? "fields" : "columns"}
           </span>
         )}
       </div>
@@ -158,15 +159,15 @@ export function SchemaViewer({ connectionId, table, dbType }: SchemaViewerProps)
       {/* Content */}
       {loading && (
         <div className="flex flex-1 items-center justify-center">
-          <div className="flex items-center gap-2 text-sm text-text-muted">
-            <Loader2 size={16} className="animate-spin" />
+          <div className="flex items-center gap-2 text-xs text-body">
+            <Loader2 size={16} className="animate-spin text-ink" />
             Loading schema…
           </div>
         </div>
       )}
 
       {!loading && error && (
-        <div className="m-4 flex items-start gap-2 rounded-md border border-danger/30 bg-danger/10 px-3 py-3 text-sm text-danger">
+        <div className="m-4 flex items-start gap-2 rounded-xl border border-danger/30 bg-danger/5 px-3.5 py-3 text-xs text-danger">
           <AlertCircle size={15} className="mt-0.5 shrink-0" />
           {error}
         </div>

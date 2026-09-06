@@ -6,9 +6,11 @@ import {
   ChevronsUpDown,
   Download,
   Loader2,
+  Pencil,
   Plus,
   RefreshCw,
   Search,
+  Trash2,
   Upload,
   X,
 } from "lucide-react";
@@ -16,7 +18,8 @@ import { fetchRows, fetchSchema, type FetchRowsOptions } from "../../api/crud";
 import { importFile, downloadExport, type ExportFormat } from "../../api/exportImport";
 import type { ColumnInfo, SchemaInfo } from "../../types";
 import { RecordEditor } from "../RecordEditor/RecordEditor";
-import { Toast, useToast } from "../Toast";
+import { Toast } from "../Toast";
+import { useToast } from "../../hooks/useToast";
 
 interface DataGridProps {
   connectionId: string;
@@ -35,15 +38,15 @@ function getErrorMessage(error: unknown): string {
 
 function CellValue({ value }: { value: unknown }) {
   if (value === null || value === undefined)
-    return <span className="italic text-text-faint">null</span>;
+    return <span className="italic text-mute">null</span>;
   if (typeof value === "boolean")
     return (
-      <span className={`font-mono text-xs ${value ? "text-accent" : "text-text-faint"}`}>
+      <span className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold ${value ? "bg-primary text-on-primary" : "bg-surface-pressed text-body"}`}>
         {String(value)}
       </span>
     );
   if (typeof value === "object")
-    return <span className="font-mono text-xs text-text-muted">{JSON.stringify(value)}</span>;
+    return <span className="font-mono text-xs text-body">{JSON.stringify(value)}</span>;
   return <span>{String(value)}</span>;
 }
 
@@ -69,19 +72,19 @@ function ExportDropdown({ connectionId, table }: { connectionId: string; table: 
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-7 items-center gap-1.5 rounded-md border border-border-subtle px-2.5 text-xs text-text-muted hover:border-accent hover:text-accent"
+        className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-canvas px-3.5 text-xs font-medium text-ink hover:bg-canvas-soft transition-colors"
       >
         <Download size={13} />
         Export
       </button>
       {open && (
-        <div className="absolute right-0 top-9 z-20 w-32 rounded-md border border-border bg-canvas py-1 shadow-xl">
+        <div className="absolute right-0 top-10 z-20 w-36 rounded-2xl border border-border bg-canvas p-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
           {(["csv", "json", "sql"] as ExportFormat[]).map((fmt) => (
             <button
               key={fmt}
               type="button"
               onClick={() => handleExport(fmt)}
-              className="w-full px-3 py-2 text-left font-mono text-xs text-text-muted hover:bg-surface-raised hover:text-text"
+              className="w-full rounded-xl px-3 py-1.5 text-left font-mono text-xs font-medium text-ink hover:bg-canvas-soft transition-colors uppercase"
             >
               .{fmt}
             </button>
@@ -110,8 +113,9 @@ export function DataGrid({ connectionId, table }: DataGridProps) {
   const importInputRef = useRef<HTMLInputElement>(null);
   const { toast, showToast, dismissToast } = useToast();
 
-  // Modal state: null=closed, undefined=insert, object=edit
+  // Modal state
   const [editorRecord, setEditorRecord] = useState<Record<string, unknown> | undefined | null>(null);
+  const [deleteMode, setDeleteMode] = useState(false);
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -135,7 +139,7 @@ export function DataGrid({ connectionId, table }: DataGridProps) {
 
     fetchSchema(connectionId, table)
       .then(setSchema)
-      .catch(() => { /* schema is optional */ });
+      .catch(() => { /* schema optional */ });
   }, [connectionId, table]);
 
   // Debounce search
@@ -207,10 +211,10 @@ export function DataGrid({ connectionId, table }: DataGridProps) {
   }
 
   function SortIcon({ field }: { field: string }) {
-    if (sort !== field) return <ChevronsUpDown size={13} className="opacity-30" />;
+    if (sort !== field) return <ChevronsUpDown size={13} className="text-mute opacity-40" />;
     return order === "asc"
-      ? <ChevronUp size={13} className="text-accent" />
-      : <ChevronDown size={13} className="text-accent" />;
+      ? <ChevronUp size={13} className="text-ink" />
+      : <ChevronDown size={13} className="text-ink" />;
   }
 
   const startRow = (page - 1) * limit + 1;
@@ -219,114 +223,123 @@ export function DataGrid({ connectionId, table }: DataGridProps) {
   return (
     <main className="flex flex-1 flex-col overflow-hidden bg-canvas">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 border-b border-border bg-surface px-4 py-2.5">
-        <h1 className="font-display text-sm font-semibold text-text">{table}</h1>
-        {total > 0 && (
-          <span className="font-mono text-xs text-text-faint">{total.toLocaleString()} rows</span>
-        )}
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-border bg-canvas px-4 py-3">
+        <div className="flex items-center gap-2">
+          <h1 className="font-display text-base font-bold text-ink tracking-tight">{table}</h1>
+          {total > 0 && (
+            <span className="rounded-full bg-canvas-soft px-2.5 py-0.5 font-mono text-xs font-medium text-body">
+              {total.toLocaleString()} rows
+            </span>
+          )}
+        </div>
 
-        <div className="flex-1" />
+        <div className="hidden flex-1 sm:block" />
 
         {/* Search */}
-        <div className="relative w-52">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-faint" />
+        <div className="relative order-last w-full sm:order-none sm:w-60">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search…"
-            className="w-full rounded-md border border-border-subtle bg-canvas py-1.5 pl-8 pr-7 font-mono text-xs text-text placeholder-text-faint focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/30"
+            placeholder="Search records…"
+            className="w-full rounded-full border border-transparent bg-canvas-soft py-1.5 pl-8 pr-8 text-xs text-ink placeholder:text-mute focus:border-ink focus:bg-canvas outline-none transition-all"
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-text-faint hover:text-text"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-mute hover:text-ink"
             >
               <X size={13} />
             </button>
           )}
         </div>
 
-        {/* Refresh */}
-        <button
-          type="button"
-          onClick={loadRows}
-          disabled={loading}
-          title="Refresh"
-          className="flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle text-text-muted hover:border-accent hover:text-accent disabled:opacity-40"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-        </button>
-
-        {/* Export */}
-        <ExportDropdown connectionId={connectionId} table={table} />
-
-        {/* Import */}
-        <>
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".csv,.json"
-            className="hidden"
-            onChange={handleImportFile}
-          />
+        <div className="ml-auto flex items-center gap-2 sm:ml-0">
+          {/* Refresh */}
           <button
             type="button"
-            disabled={importing}
-            onClick={() => importInputRef.current?.click()}
-            className="flex h-7 items-center gap-1.5 rounded-md border border-border-subtle px-2.5 text-xs text-text-muted hover:border-accent hover:text-accent disabled:opacity-40"
+            onClick={loadRows}
+            disabled={loading}
+            title="Refresh"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-canvas-soft text-ink hover:bg-surface-pressed disabled:opacity-40 transition-colors"
           >
-            {importing ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-            Import
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
           </button>
-        </>
 
-        {/* Add row */}
-        {schema && (
-          <button
-            type="button"
-            onClick={() => setEditorRecord(undefined)}
-            className="flex h-7 items-center gap-1.5 rounded-md bg-accent px-3 text-xs font-medium text-canvas hover:opacity-90"
-          >
-            <Plus size={13} />
-            Add row
-          </button>
-        )}
+          {/* Export */}
+          <ExportDropdown connectionId={connectionId} table={table} />
+
+          {/* Import */}
+          <>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".csv,.json"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+            <button
+              type="button"
+              disabled={importing}
+              onClick={() => importInputRef.current?.click()}
+              className="flex h-8 items-center gap-1.5 rounded-full border border-border bg-canvas px-3.5 text-xs font-medium text-ink hover:bg-canvas-soft disabled:opacity-40 transition-colors"
+            >
+              {importing ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+              <span>Import</span>
+            </button>
+          </>
+
+          {/* Add row */}
+          {schema && (
+            <button
+              type="button"
+              onClick={() => setEditorRecord(undefined)}
+              className="flex h-8 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-on-primary shadow-sm hover:opacity-90 transition-opacity"
+            >
+              <Plus size={13} />
+              <span>Add row</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <Toast toast={toast} onDismiss={dismissToast} />
 
       {/* Error banner */}
       {error && (
-        <div className="flex items-start gap-2 border-b border-danger/30 bg-danger/10 px-4 py-2.5 text-sm text-danger">
-          <AlertCircle size={15} className="mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2 border-b border-danger/30 bg-danger/5 px-4 py-2.5 text-xs text-danger">
+          <AlertCircle size={14} className="mt-0.5 shrink-0" />
           {error}
         </div>
       )}
 
-      {/* Table area */}
+      {/* Data Table with ex-data-table-cell styling */}
       <div className="relative flex-1 overflow-auto">
         {loading && rows.length === 0 && (
           <div className="flex h-full items-center justify-center">
-            <div className="flex items-center gap-2 text-sm text-text-muted">
-              <Loader2 size={16} className="animate-spin" />
+            <div className="flex items-center gap-2 text-xs text-body">
+              <Loader2 size={15} className="animate-spin text-ink" />
               Loading rows…
             </div>
           </div>
         )}
 
         {!loading && rows.length === 0 && !error && (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <p className="text-sm text-text-muted">
-                {debouncedSearch ? "No rows match your search." : "This table is empty."}
+          <div className="flex h-full items-center justify-center p-6">
+            <div className="w-full max-w-sm rounded-2xl border border-border bg-canvas-soft p-8 text-center">
+              <p className="text-sm font-semibold text-ink">
+                {debouncedSearch ? "No rows match your search" : "This table is empty"}
+              </p>
+              <p className="mt-1 text-xs text-body">
+                {debouncedSearch ? "Try adjusting your query filter." : "Click 'Add row' or 'Import' to populate data."}
               </p>
               {debouncedSearch && (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="mt-2 text-xs text-accent hover:underline"
+                  className="mt-4 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-on-primary hover:opacity-90 transition-opacity"
                 >
                   Clear search
                 </button>
@@ -336,51 +349,65 @@ export function DataGrid({ connectionId, table }: DataGridProps) {
         )}
 
         {rows.length > 0 && (
-          <table className="w-full border-collapse text-sm">
-            <thead className="sticky top-0 z-10 bg-surface">
+          <table className="w-full border-collapse text-xs">
+            <thead className="sticky top-0 z-10 bg-canvas-soft border-b border-border">
               <tr>
                 {columns.map((col) => (
                   <th
                     key={col.name}
-                    className="border-b border-r border-border px-3 py-2.5 text-left font-medium last:border-r-0"
+                    className="border-r border-border px-4 py-3 text-left font-semibold text-ink last:border-r-0"
                   >
                     <button
                       type="button"
                       onClick={() => handleSort(col.name)}
-                      className="flex items-center gap-1.5 font-mono text-[11px] uppercase text-text-faint hover:text-text"
+                      className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-body hover:text-ink transition-colors"
                     >
                       {col.name}
                       {col.isPrimaryKey && (
-                        <span className="rounded border border-accent/30 px-0.5 text-[9px] uppercase text-accent">pk</span>
+                        <span className="rounded-full bg-primary px-1.5 py-0.2 text-[9px] uppercase font-semibold text-on-primary">
+                          pk
+                        </span>
                       )}
                       <SortIcon field={col.name} />
                     </button>
                   </th>
                 ))}
-                <th className="border-b border-border px-3 py-2.5 text-left">
-                  <span className="font-mono text-[11px] uppercase text-text-faint">actions</span>
+                <th className="px-4 py-3 text-left font-semibold text-ink">
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-body">Actions</span>
                 </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row, rowIdx) => (
-                <tr key={rowIdx} className="group border-b border-border-subtle hover:bg-surface-raised">
+                <tr key={rowIdx} className="group border-b border-border transition-colors hover:bg-canvas-soft/60">
                   {columns.map((col) => (
                     <td
                       key={col.name}
-                      className="max-w-xs truncate border-r border-border-subtle px-3 py-2 last:border-r-0"
+                      className="max-w-xs truncate border-r border-border px-4 py-2.5 font-mono text-xs text-ink last:border-r-0"
                     >
                       <CellValue value={row[col.name]} />
                     </td>
                   ))}
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditorRecord(row)}
-                      className="rounded px-2 py-0.5 font-mono text-[11px] text-text-faint opacity-0 transition-opacity group-hover:opacity-100 hover:bg-surface hover:text-accent"
-                    >
-                      edit
-                    </button>
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => { setDeleteMode(false); setEditorRecord(row); }}
+                        title="Edit row"
+                        className="flex items-center gap-1 rounded-full bg-canvas-soft hover:bg-surface-pressed px-2.5 py-1 text-[11px] font-medium text-ink transition-colors"
+                      >
+                        <Pencil size={11} />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setDeleteMode(true); setEditorRecord(row); }}
+                        title="Delete row"
+                        className="flex h-6 w-6 items-center justify-center rounded-full text-mute hover:bg-danger/10 hover:text-danger transition-colors"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -389,45 +416,47 @@ export function DataGrid({ connectionId, table }: DataGridProps) {
         )}
 
         {loading && rows.length > 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-canvas/50">
-            <Loader2 size={20} className="animate-spin text-accent" />
+          <div className="absolute inset-0 flex items-center justify-center bg-canvas/40 backdrop-blur-[1px]">
+            <Loader2 size={20} className="animate-spin text-ink" />
           </div>
         )}
       </div>
 
       {/* Pagination bar */}
       {(rows.length > 0 || total > 0) && (
-        <div className="flex items-center justify-between border-t border-border bg-surface px-4 py-2">
-          <span className="font-mono text-xs text-text-faint">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-canvas px-4 py-2.5">
+          <span className="font-mono text-xs text-body">
             {total > 0 ? `${startRow}–${endRow} of ${total.toLocaleString()}` : "0 rows"}
           </span>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               disabled={page <= 1 || loading}
               onClick={() => setPage((p) => p - 1)}
-              className="rounded px-2 py-1 text-xs text-text-muted hover:text-text disabled:opacity-30"
+              className="rounded-full border border-border bg-canvas hover:bg-canvas-soft px-3.5 py-1 text-xs font-medium text-ink disabled:opacity-30 transition-colors"
             >
-              ← Prev
+              Previous
             </button>
-            <span className="font-mono text-xs text-text-muted">{page} / {totalPages}</span>
+            <span className="font-mono text-xs font-medium text-ink px-2">
+              {page} / {totalPages}
+            </span>
             <button
               type="button"
               disabled={page >= totalPages || loading}
               onClick={() => setPage((p) => p + 1)}
-              className="rounded px-2 py-1 text-xs text-text-muted hover:text-text disabled:opacity-30"
+              className="rounded-full border border-border bg-canvas hover:bg-canvas-soft px-3.5 py-1 text-xs font-medium text-ink disabled:opacity-30 transition-colors"
             >
-              Next →
+              Next
             </button>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-text-faint">rows per page</span>
+            <span className="font-mono text-xs text-body hidden sm:inline">Per page:</span>
             <select
               value={limit}
               onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-              className="rounded border border-border-subtle bg-canvas px-2 py-1 font-mono text-xs text-text-muted focus:border-accent focus:outline-none"
+              className="rounded-full border border-border bg-canvas-soft px-3 py-1 font-mono text-xs text-ink focus:outline-none"
             >
               {PAGE_SIZES.map((size) => (
                 <option key={size} value={size}>{size}</option>
@@ -445,8 +474,9 @@ export function DataGrid({ connectionId, table }: DataGridProps) {
           columns={columns}
           record={editorRecord}
           primaryKey={primaryKey}
-          onClose={() => setEditorRecord(null)}
-          onSaved={() => { setEditorRecord(null); loadRows(); }}
+          startInDeletePhase={deleteMode}
+          onClose={() => { setEditorRecord(null); setDeleteMode(false); }}
+          onSaved={() => { setEditorRecord(null); setDeleteMode(false); loadRows(); }}
         />
       )}
     </main>

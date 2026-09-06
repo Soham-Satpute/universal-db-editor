@@ -2,6 +2,7 @@ import { Db, Document, Filter, MongoClient, ObjectId, Sort } from "mongodb";
 import { BaseProvider } from "./BaseProvider";
 import {
   ConnectionConfig,
+  IndexInfo,
   PaginatedResult,
   QueryOptions,
   QueryResult,
@@ -60,6 +61,63 @@ export class MongoProvider extends BaseProvider {
     this.assertConnected();
     const collections = await this.db!.listCollections().toArray();
     return collections.map((collection) => collection.name).sort((a, b) => a.localeCompare(b));
+  }
+
+  /** Index names across every collection — mostly for the explorer tree count. */
+  async listIndexes(): Promise<string[]> {
+    this.assertConnected();
+    const details = await this.listIndexDetails();
+    return details.map((idx) => idx.name);
+  }
+
+  /**
+   * Richer index listing (collection + keys + unique flag) used by the
+   * index-management UI. Mongo indexes are scoped per-collection (there's
+   * no single global namespace like SQL databases have), so this walks
+   * every collection. The default `_id_` index on every collection is
+   * skipped — it can't be dropped and isn't user-managed.
+   */
+  async listIndexDetails(): Promise<IndexInfo[]> {
+    this.assertConnected();
+    const collections = await this.db!.listCollections().toArray();
+    const result: IndexInfo[] = [];
+
+    for (const collInfo of collections) {
+      const idxs = await this.db!.collection(collInfo.name).indexes();
+      for (const idx of idxs) {
+        if (idx.name === "_id_") continue;
+        result.push({
+          name: idx.name ?? "",
+          table: collInfo.name,
+          columns: Object.keys(idx.key ?? {}),
+          unique: Boolean(idx.unique),
+        });
+      }
+    }
+    return result;
+  }
+
+  async createIndex(
+    table: string,
+    columns: string[],
+    options?: { unique?: boolean; name?: string },
+  ): Promise<string> {
+    this.assertConnected();
+    if (columns.length === 0) throw new Error("At least one field is required");
+
+    const keySpec = Object.fromEntries(columns.map((c) => [c, 1] as const));
+    const name = await this.db!.collection(table).createIndex(keySpec, {
+      unique: options?.unique,
+      name: options?.name?.trim() || undefined,
+    });
+    return name;
+  }
+
+  /** Mongo indexes live on a specific collection, so dropping one needs it. */
+  async dropIndex(name: string, table?: string): Promise<void> {
+    this.assertConnected();
+    if (!table) throw new Error("Dropping a MongoDB index requires the collection name");
+    await this.db!.collection(table).dropIndex(name);
   }
 
   async getSchema(table: string): Promise<SchemaInfo> {

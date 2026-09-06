@@ -2,6 +2,10 @@ import { api } from "./client";
 
 export type ExportFormat = "csv" | "json" | "sql";
 
+/** Formats supported for a full-database dump (no CSV — a single file
+ *  can't sensibly hold multiple tables' worth of CSV rows). */
+export type FullExportFormat = "json" | "sql";
+
 /**
  * Triggers a file download by creating a temporary anchor element.
  * The browser handles the save-as dialog.
@@ -15,6 +19,23 @@ export function downloadExport(
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = `${table}_export.${format}`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+}
+
+/**
+ * Downloads a dump of every table/collection in the connection as a
+ * single .sql or .json file.
+ */
+export function downloadFullExport(
+  connectionId: string,
+  format: FullExportFormat,
+): void {
+  const url = `/api/export/${connectionId}?format=${format}`;
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `database_export.${format}`;
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);

@@ -318,6 +318,29 @@ All three set `Content-Disposition: attachment; filename="<table>_export.<format
 **Response `400`** if `format` isn't one of the three above.
 **Response `404`** if `connId` doesn't exist (only if it fails before any bytes are written — once streaming starts, errors can't change the HTTP status, since headers are already sent).
 
+### `GET /api/export/:connId?format=json|sql`
+
+Full-database dump: every table/collection in one file, still
+streamed in pages of 500 rows per table. `format` defaults to `sql`
+if omitted. CSV is **not** offered here — a single flat file can't
+sensibly hold multiple tables — use the per-table endpoint above for
+CSV.
+
+- `sql` → `Content-Type: text/plain`, one commented header per
+  table (`-- Table: users`) followed by its `INSERT INTO ...`
+  statements; tables with no rows get a `-- (no rows)` marker instead
+  of being silently skipped.
+- `json` → `Content-Type: application/json`, an object keyed by
+  table name, each value a JSON array of rows:
+  ```json
+  { "users": [ { "id": 1, "name": "Ada" } ], "orders": [ ... ] }
+  ```
+
+Both set `Content-Disposition: attachment; filename="<connection_name>_full_export.<format>"`.
+
+**Response `400`** if `format` isn't `json` or `sql`.
+**Response `404`** if `connId` doesn't exist (before streaming starts).
+
 ---
 
 ## Import
@@ -340,6 +363,120 @@ empty strings.
 `errors` is capped at the first 20 entries.
 
 **Response `400`** — no file uploaded, file isn't valid CSV/JSON, or the file has zero data rows.
+
+---
+
+## Indexes
+
+Index introspection/management is optional per provider — the same
+pattern the explorer routes use for `listViews()`/`listIndexes()`.
+SQLite and PostgreSQL support all three endpoints below. For MongoDB,
+indexes are scoped to a specific collection rather than one global
+namespace, so `table` is required where noted.
+
+### `GET /api/indexes/:connId`
+
+**Response `200`**
+```json
+{
+  "ok": true,
+  "supported": true,
+  "indexes": [
+    { "name": "users_email_idx", "table": "users", "columns": ["email"], "unique": true }
+  ]
+}
+```
+If the connected provider doesn't support index introspection,
+returns `{ ok: true, indexes: [], supported: false }` instead of an
+error.
+
+### `POST /api/indexes/:connId`
+
+**Body:**
+```json
+{ "table": "users", "columns": ["email"], "unique": true, "name": "users_email_idx" }
+```
+`unique` defaults to `false`; `name` is optional — the provider
+generates one if omitted. Supports composite indexes (multiple
+entries in `columns`).
+
+**Responses**
+- `200` — `{ ok: true, index: { name, table, columns, unique } }`
+- `400` — `table` missing, `columns` empty, or the provider doesn't support creating indexes
+
+### `DELETE /api/indexes/:connId/:name`
+
+**Query params:** `table` — required for MongoDB (indexes are
+collection-scoped there), optional/ignored for SQL databases.
+
+**Responses**
+- `200` — `{ ok: true }`
+- `400` — the provider doesn't support dropping indexes
+
+Shared error for all index routes: `404` if `connId` doesn't exist.
+
+---
+
+## AI Assistant
+
+Groq-backed helpers for the Query Playground — autocomplete, plain-English
+explanations, and error fixes. All three require `GROQ_API_KEY` to be
+set on the server (see the environment variables table in
+`README.md`); without it, every endpoint below returns `500` with a
+message saying so.
+
+Each endpoint builds a compact schema-context string (table list,
+plus column detail for the focused table and up to 4 others) to
+ground the model's response, and calls Groq's OpenAI-compatible
+`/chat/completions` endpoint (default model `llama-3.3-70b-versatile`,
+overridable via `GROQ_MODEL`) with `response_format: json_object`.
+
+### `POST /api/ai/:connId/autocomplete`
+
+**Body:**
+```json
+{ "query": "SELECT * FROM users WHERE ", "table": "users" }
+```
+`table` is optional — it just gets schema detail prioritized in the
+prompt context.
+
+**Response `200`**
+```json
+{ "ok": true, "suggestion": "created_at > '2026-01-01'" }
+```
+`suggestion` is empty-string if the model found nothing sensible to add.
+
+### `POST /api/ai/:connId/explain`
+
+**Body:**
+```json
+{ "query": "SELECT * FROM users LIMIT 10", "table": "users" }
+```
+
+**Response `200`**
+```json
+{ "ok": true, "explanation": "Reads the first 10 rows from users, all columns, no filtering." }
+```
+
+### `POST /api/ai/:connId/fix`
+
+**Body:**
+```json
+{ "query": "SELCT * FROM users", "error": "syntax error at or near \"SELCT\"", "table": "users" }
+```
+`error` is optional but improves the fix quality — pass whatever
+message the failed query returned.
+
+**Response `200`**
+```json
+{ "ok": true, "fixedQuery": "SELECT * FROM users", "explanation": "Fixed the misspelled SELECT keyword." }
+```
+
+**Shared for all three AI routes**
+- `400` — empty `query`
+- `404` — `connId` doesn't exist
+- `500` — `GROQ_API_KEY` not configured, Groq API unreachable, or Groq returned an error/empty response
+- `502` — Groq API returned a non-2xx response or the request to Groq failed at the network level
 
 ---
 
@@ -370,4 +507,5 @@ true` in the body bypasses the guard for that one request.
 | `400` | Bad request body (validation failure, missing required field, malformed file) |
 | `403` | Blocked by `queryGuard` — dangerous query, needs `{ confirmed: true }` |
 | `404` | Connection id (or, implicitly, table) not found |
-| `500` | Unexpected server error — driver error, decryption failure, etc. |
+| `500` | Unexpected server error — driver error, decryption failure, missing `GROQ_API_KEY`, etc. |
+| `502` | Upstream failure calling the Groq API (AI assistant routes only) |
