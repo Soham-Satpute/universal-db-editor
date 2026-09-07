@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AlertCircle, Loader2, Trash2, X } from "lucide-react";
 import type { ColumnInfo } from "../../types";
 import { insertRow, updateRow, deleteRow } from "../../api/crud";
@@ -126,7 +127,7 @@ export function RecordEditor({
     return true;
   });
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -278,6 +279,7 @@ export function RecordEditor({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

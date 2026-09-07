@@ -48,4 +48,10 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "universal-db-editor-server" });
 });
 
+// Centralized error-handling middleware to ensure JSON errors
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const status = typeof err.status === "number" ? err.status : typeof err.statusCode === "number" ? err.statusCode : 400;
+  res.status(status).json({ ok: false, error: err.message || "An unexpected error occurred" });
+});
+
 export default app;

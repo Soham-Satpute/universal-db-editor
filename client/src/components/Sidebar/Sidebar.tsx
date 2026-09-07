@@ -38,15 +38,7 @@ const dbMeta: Record<DbType, { label: string; Icon: typeof Database }> = {
   mongodb: { label: "MongoDB", Icon: Leaf },
 };
 
-function getErrorMessage(error: unknown): string {
-  if (typeof error === "object" && error !== null && "response" in error) {
-    const response = (error as { response?: { data?: { error?: unknown } } }).response;
-    const apiError = response?.data?.error;
-    if (typeof apiError === "string") return apiError;
-    if (apiError) return "Request failed validation";
-  }
-  return error instanceof Error ? error.message : "Something went wrong";
-}
+import { getErrorMessage } from "../../utils/error";
 
 export function Sidebar() {
   const connections = useConnectionStore((s) => s.connections);
@@ -367,16 +359,16 @@ export function Sidebar() {
           )}
         </div>
         </div>
-
-        {modalConnection !== undefined && (
-          <ConnectionForm
-            connection={modalConnection}
-            onClose={() => setModalConnection(undefined)}
-            onSave={handleSave}
-            onTest={handleTest}
-          />
-        )}
       </aside>
+
+      {modalConnection !== undefined && (
+        <ConnectionForm
+          connection={modalConnection}
+          onClose={() => setModalConnection(undefined)}
+          onSave={handleSave}
+          onTest={handleTest}
+        />
+      )}
 
       <Toast toast={toast} onDismiss={dismissToast} />
     </>

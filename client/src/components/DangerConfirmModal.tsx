@@ -5,6 +5,7 @@
  * high-contrast pill actions, and sentence-case typography.
  */
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, Loader2, X } from "lucide-react";
 import { useConnectionStore } from "../store/connectionStore";
 
@@ -48,7 +49,7 @@ export function DangerConfirmModal() {
     if (e.key === "Escape") setDangerPayload(null);
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={() => !running && setDangerPayload(null)}
@@ -127,6 +128,7 @@ export function DangerConfirmModal() {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

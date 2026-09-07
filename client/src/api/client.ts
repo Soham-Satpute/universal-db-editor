@@ -6,5 +6,4 @@ import axios from "axios";
 // (see client/Dockerfile, added Day 6).
 export const api = axios.create({
   baseURL: "/api",
-  headers: { "Content-Type": "application/json" },
 });

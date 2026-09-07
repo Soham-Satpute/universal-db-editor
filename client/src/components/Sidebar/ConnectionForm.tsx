@@ -1,6 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import { createPortal } from "react-dom";
 import {
+  AlertCircle,
   CheckCircle2,
   Database,
   FileArchive,
@@ -12,6 +14,7 @@ import {
 } from "lucide-react";
 import type { Connection, DbType } from "../../types";
 import type { ConnectionFormValues } from "../../api/connections";
+import { getErrorMessage } from "../../utils/error";
 
 interface ConnectionFormProps {
   connection?: Connection | null;
@@ -57,20 +60,27 @@ export function ConnectionForm({ connection, onClose, onSave, onTest }: Connecti
   );
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const setField = <Key extends keyof ConnectionFormValues>(
     key: Key,
     value: ConnectionFormValues[Key],
-  ) => setValues((current) => ({ ...current, [key]: value }));
+  ) => {
+    setError(null);
+    setValues((current) => ({ ...current, [key]: value }));
+  };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError(null);
     setSaving(true);
     try {
       await onSave({
         ...values,
         connectionString: useConnectionString ? values.connectionString : "",
       });
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -78,16 +88,34 @@ export function ConnectionForm({ connection, onClose, onSave, onTest }: Connecti
 
   async function handleTest() {
     if (!connection?.id || !onTest) return;
+    setError(null);
     setTesting(true);
     try {
       await onTest(connection.id);
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setTesting(false);
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       {/* ex-modal-card: 16px radius, Level 2 drop shadow */}
       <form
         onSubmit={handleSubmit}
@@ -113,32 +141,50 @@ export function ConnectionForm({ connection, onClose, onSave, onTest }: Connecti
         </div>
 
         <div className="space-y-4 overflow-y-auto px-6 py-5">
+          {/* Inline Error Alert */}
+          {error && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-2.5 text-xs text-danger">
+              <AlertCircle size={15} className="mt-0.5 shrink-0" />
+              <span className="flex-1 font-medium leading-relaxed">{error}</span>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="shrink-0 text-danger hover:opacity-75 transition-opacity"
+                aria-label="Dismiss error"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          )}
+
           {/* Name and Favorite */}
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-wider text-mute">Name</span>
+          <div>
+            <label htmlFor="connection-name" className="block text-xs font-semibold uppercase tracking-wider text-mute">
+              Name
+            </label>
+            <div className="mt-1.5 flex items-center gap-2.5">
               <input
+                id="connection-name"
                 required
                 value={values.name}
                 onChange={(event) => setField("name", event.target.value)}
-                className="mt-1.5 h-10 w-full rounded-lg border border-transparent bg-canvas-soft px-3.5 text-sm text-ink outline-none transition-all placeholder:text-mute focus:border-ink focus:bg-canvas"
+                className="h-10 flex-1 rounded-lg border border-transparent bg-canvas-soft px-3.5 text-sm text-ink outline-none transition-all placeholder:text-mute focus:border-ink focus:bg-canvas"
                 placeholder="Production analytics"
               />
-            </label>
-
-            <label className="mt-6 flex h-10 cursor-pointer items-center gap-2 rounded-full border border-border bg-canvas-soft px-4 text-xs font-medium text-ink transition-colors hover:bg-surface-pressed">
-              <input
-                type="checkbox"
-                checked={values.isFavorite}
-                onChange={(event) => setField("isFavorite", event.target.checked)}
-                className="sr-only"
-              />
-              <Star
-                size={14}
-                className={values.isFavorite ? "fill-primary text-primary" : "text-mute"}
-              />
-              <span>Favorite</span>
-            </label>
+              <label className="flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-border bg-canvas-soft px-4 text-xs font-medium text-ink transition-colors hover:bg-surface-pressed select-none">
+                <input
+                  type="checkbox"
+                  checked={values.isFavorite}
+                  onChange={(event) => setField("isFavorite", event.target.checked)}
+                  className="sr-only"
+                />
+                <Star
+                  size={14}
+                  className={values.isFavorite ? "fill-primary text-primary" : "text-mute"}
+                />
+                <span>Favorite</span>
+              </label>
+            </div>
           </div>
 
           {/* Database Type Segmented Pill */}
@@ -333,6 +379,7 @@ export function ConnectionForm({ connection, onClose, onSave, onTest }: Connecti
           </div>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

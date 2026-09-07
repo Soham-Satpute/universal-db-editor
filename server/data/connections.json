@@ -1,14 +1,5 @@
 [
   {
-    "id": "8ec1b7b2-5569-4e4c-8b28-bd3bc59ff018",
-    "name": "test",
-    "type": "sqlite",
-    "encryptedConfig": "1545d26fc0d41e8f21285582:e0634a941fb03ce4aa55524319873276:493bc2c8ba9f16ee3cfad16bdc929bb95b990364b80851a0454fd366162d1a9829e45c9a7581727a9f49e6cb4a2bcf7d9358ca305a6507f492f589713729b4a2c68cdd6718c034502db896a66ded",
-    "isFavorite": false,
-    "createdAt": "2026-06-25T11:29:41.719Z",
-    "updatedAt": "2026-09-07T03:49:29.277Z"
-  },
-  {
     "id": "a5edd0fb-6ebd-425f-8c00-b2b305ac225e",
     "name": "postgres",
     "type": "mongodb",
@@ -16,5 +7,14 @@
     "isFavorite": false,
     "createdAt": "2026-06-29T06:29:17.695Z",
     "updatedAt": "2026-09-07T03:52:01.380Z"
+  },
+  {
+    "id": "0a40ce2e-d606-4a71-a953-9a1d2a06828d",
+    "name": "test",
+    "type": "sqlite",
+    "encryptedConfig": "87428d28f962364a060adbf5:485f5aeb369b8832cd553d0942e72578:8105d8054786d12ab1b0f36e530e7be86cdccf2952662fb2838fc3ad4600980f0e6dee4b1ac2cf46730438ee4485419dc3c9d27875e09bc3864844e5ff3541d05673d74beec9e5317b0de46b6d27",
+    "isFavorite": false,
+    "createdAt": "2026-09-07T07:06:17.592Z",
+    "updatedAt": "2026-09-07T07:06:17.592Z"
   }
 ]
