@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Database, GitFork, Play, Table2 } from "lucide-react";
 import { Header } from "./components/Layout/Header";
 import { Sidebar } from "./components/Sidebar/Sidebar";
@@ -145,6 +145,24 @@ function MainContent() {
 // App root
 // ---------------------------------------------------------------------------
 function App() {
+  const toggleSidebar = useConnectionStore((s) => s.toggleSidebar);
+  const toggleSidebarCollapse = useConnectionStore((s) => s.toggleSidebarCollapse);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        if (window.innerWidth < 768) {
+          toggleSidebar();
+        } else {
+          toggleSidebarCollapse();
+        }
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleSidebar, toggleSidebarCollapse]);
+
   return (
     <div className="flex h-screen flex-col bg-canvas text-ink">
       <Header />

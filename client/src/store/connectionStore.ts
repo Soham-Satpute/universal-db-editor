@@ -24,9 +24,11 @@ interface ConnectionState {
   /** Non-null when a dangerous-operation confirmation is needed */
   dangerPayload: DangerPayload | null;
 
-  /** Mobile drawer state for the sidebar (<768px). Ignored on desktop,
-   *  where the sidebar is always visible via the md: breakpoint. */
+  /** Mobile drawer state for the sidebar (<768px). */
   sidebarOpen: boolean;
+
+  /** Desktop collapsible state (>=768px). */
+  sidebarCollapsed: boolean;
 
   setConnections: (connections: Connection[]) => void;
   setActiveConnection: (connectionId: string | null) => void;
@@ -36,7 +38,16 @@ interface ConnectionState {
   setDangerPayload: (payload: DangerPayload | null) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
+  toggleSidebarCollapse: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
 }
+
+const SIDEBAR_COLLAPSED_KEY = "universal_db_sidebar_collapsed";
+
+const initialSidebarCollapsed =
+  typeof window !== "undefined"
+    ? localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true"
+    : false;
 
 export const useConnectionStore = create<ConnectionState>((set) => ({
   connections: [],
@@ -46,6 +57,7 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
   explorerTree: null,
   dangerPayload: null,
   sidebarOpen: false,
+  sidebarCollapsed: initialSidebarCollapsed,
 
   setConnections: (connections) => set({ connections }),
 
@@ -71,4 +83,20 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
+
+  toggleSidebarCollapse: () =>
+    set((s) => {
+      const next = !s.sidebarCollapsed;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+      } catch {}
+      return { sidebarCollapsed: next };
+    }),
+
+  setSidebarCollapsed: (collapsed) => {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
+    } catch {}
+    set({ sidebarCollapsed: collapsed });
+  },
 }));

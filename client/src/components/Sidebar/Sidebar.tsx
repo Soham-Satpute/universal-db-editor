@@ -9,6 +9,7 @@ import {
   Leaf,
   Loader2,
   MoreVertical,
+  PanelLeftClose,
   Plus,
   RefreshCw,
   Server,
@@ -54,6 +55,8 @@ export function Sidebar() {
   const setActiveConnection = useConnectionStore((s) => s.setActiveConnection);
   const sidebarOpen = useConnectionStore((s) => s.sidebarOpen);
   const setSidebarOpen = useConnectionStore((s) => s.setSidebarOpen);
+  const sidebarCollapsed = useConnectionStore((s) => s.sidebarCollapsed);
+  const toggleSidebarCollapse = useConnectionStore((s) => s.toggleSidebarCollapse);
 
   const [loading, setLoading] = useState(true);
   const [modalConnection, setModalConnection] = useState<Connection | null | undefined>();
@@ -159,25 +162,41 @@ export function Sidebar() {
       )}
 
       <aside
-        className={`fixed inset-x-0 bottom-0 top-14 z-40 flex w-80 max-w-[85vw] -translate-x-full flex-col border-r border-border bg-canvas transition-transform duration-200 md:static md:inset-auto md:w-80 md:max-w-none md:shrink-0 md:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : ""
+        className={`fixed inset-x-0 bottom-0 top-14 z-40 flex flex-col border-r border-border bg-canvas transition-all duration-200 ease-in-out md:static md:inset-auto md:shrink-0 ${
+          sidebarOpen ? "translate-x-0 w-80 max-w-[85vw]" : "-translate-x-full w-80 max-w-[85vw]"
+        } ${
+          sidebarCollapsed
+            ? "md:translate-x-0 md:w-0 md:border-r-0 md:opacity-0 md:pointer-events-none md:overflow-hidden"
+            : "md:translate-x-0 md:w-80 md:opacity-100 md:pointer-events-auto"
         }`}
       >
-        {/* Header section with add button */}
-        <div className="border-b border-border px-4 py-3.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-mute">
-              Connections
-            </span>
-            <button
-              type="button"
-              onClick={() => setModalConnection(null)}
-              title="Add connection"
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-on-primary hover:opacity-90 transition-opacity"
-            >
-              <Plus size={15} />
-            </button>
-          </div>
+        <div className="flex h-full w-80 min-w-[20rem] flex-col overflow-hidden">
+          {/* Header section with add button and collapse button */}
+          <div className="border-b border-border px-4 py-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-mute">
+                Connections
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setModalConnection(null)}
+                  title="Add connection"
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-on-primary hover:opacity-90 transition-opacity"
+                >
+                  <Plus size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleSidebarCollapse}
+                  title="Collapse sidebar (Ctrl+B)"
+                  aria-label="Collapse sidebar"
+                  className="hidden md:flex h-7 w-7 items-center justify-center rounded-full text-mute hover:bg-surface-pressed hover:text-ink transition-colors"
+                >
+                  <PanelLeftClose size={14} />
+                </button>
+              </div>
+            </div>
 
           {/* Active connection card (card-soft-tinted) */}
           <div className="mt-3 rounded-2xl border border-border bg-canvas-soft p-3">
@@ -346,6 +365,7 @@ export function Sidebar() {
               })}
             </ul>
           )}
+        </div>
         </div>
 
         {modalConnection !== undefined && (

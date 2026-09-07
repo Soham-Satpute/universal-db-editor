@@ -1,4 +1,4 @@
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, PanelLeftClose, PanelLeft } from "lucide-react";
 import { useConnectionStore } from "../../store/connectionStore";
 import { useTheme } from "../../hooks/useTheme";
 
@@ -12,22 +12,38 @@ export function Header() {
   const activeConnection = useConnectionStore((s) =>
     s.connections.find((connection) => connection.id === activeConnectionId),
   );
+  const sidebarOpen = useConnectionStore((s) => s.sidebarOpen);
   const toggleSidebar = useConnectionStore((s) => s.toggleSidebar);
+  const sidebarCollapsed = useConnectionStore((s) => s.sidebarCollapsed);
+  const toggleSidebarCollapse = useConnectionStore((s) => s.toggleSidebarCollapse);
   const { theme, toggleTheme } = useTheme();
+
+  function handleToggleSidebar() {
+    if (window.innerWidth < 768) {
+      toggleSidebar();
+    } else {
+      toggleSidebarCollapse();
+    }
+  }
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-canvas px-4 sm:px-6">
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={toggleSidebar}
-          title="Toggle sidebar"
+          onClick={handleToggleSidebar}
+          title="Toggle sidebar (Ctrl+B)"
           aria-label="Toggle sidebar"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-canvas-soft text-ink hover:bg-surface-pressed md:hidden transition-colors"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-canvas-soft text-ink hover:bg-surface-pressed transition-colors"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-          </svg>
+          {/* Desktop icon */}
+          <span className="hidden md:inline-flex">
+            {sidebarCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
+          </span>
+          {/* Mobile icon */}
+          <span className="inline-flex md:hidden">
+            {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeft size={16} />}
+          </span>
         </button>
 
         <div className="flex items-center gap-2.5">
