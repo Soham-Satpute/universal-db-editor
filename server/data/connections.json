@@ -1,12 +1,12 @@
 [
   {
     "id": "a5edd0fb-6ebd-425f-8c00-b2b305ac225e",
-    "name": "postgres",
+    "name": "Mongo test",
     "type": "mongodb",
-    "encryptedConfig": "dc1c63acc63684e1c185b8a0:49cdae5625152dada38df908920f22cf:56c1b68590ce5a5ac5208fe26c7e1a38f7ca96071861e63a20fb58bd7d85f3dd6516394ed2f87b316a202921a7dbf92d8aae3130a153b1b41c4656bb826c2344404cae692e7214f818244fec992779dc9519cf85fe32aa2a5cc8b1a3d6c692ebcd7f554b10f8929d389e0c24222dfb2ff9d13b393630b08b8b377a7ba3c869b1cb4586d75c8368b44d0422765dfa952597d4d2d4b5637400938bbd6be5f5",
+    "encryptedConfig": "fc4f7e89e128df8ee85e8031:fe61b3e259b19f17ac41c1f765dfabc1:44b73c7454cc054f59da0aa1060c3dbb2a8e3b8981bcb6d7d054188f2c463ac90485063ebec842c6a80dd3d4e980b5e20a1e3b5e32653c6b69be4a770c62f8ffa73382f8984466f42d80433a2505982ee4f7762f7ecea89f702dffff380d53fdda69086e7402737c9eda3a712b925b260a2b7f50e4f797e8f708fb055ebe41a914f95dc2eefb669eda553ea48fa76919e3a95eb68f99e714755e5040fe18",
     "isFavorite": false,
     "createdAt": "2026-06-29T06:29:17.695Z",
-    "updatedAt": "2026-09-07T03:52:01.380Z"
+    "updatedAt": "2026-09-07T15:17:38.488Z"
   },
   {
     "id": "0a40ce2e-d606-4a71-a953-9a1d2a06828d",
@@ -16,5 +16,14 @@
     "isFavorite": false,
     "createdAt": "2026-09-07T07:06:17.592Z",
     "updatedAt": "2026-09-07T07:06:17.592Z"
+  },
+  {
+    "id": "3a0b2f7e-0f93-41e0-8a5a-c7fb15031bbb",
+    "name": "Postgres test",
+    "type": "postgresql",
+    "encryptedConfig": "d0606b6f53ce2442c41a8e98:5304561add15698e0e121600995fd452:389a90f6c8db3bde1016369c01a6e87f310fcc7cf42394516a6af40d31e0942ca6bc1e4ac1b3e3a53bb1fb4664e363892a705f2344d7aac589d93f271d595fcf9491427d26d4ce6a83570a79abc83afc3dd570f7910f6d236b0dd2c0e2eedfadecc786d54e9eef2ed56633241c94",
+    "isFavorite": false,
+    "createdAt": "2026-09-07T15:15:07.184Z",
+    "updatedAt": "2026-09-07T15:17:46.025Z"
   }
 ]

@@ -165,10 +165,11 @@ export class PostgreSQLProvider extends BaseProvider {
   async query(sql: string, params: unknown[] = []): Promise<QueryResult> {
     this.assertConnected();
     const result = await this.pool!.query(sql, params);
+    const lastResult = Array.isArray(result) ? result[result.length - 1] : result;
     return {
-      rows: result.rows,
-      rowCount: result.rowCount ?? result.rows.length,
-      fields: result.fields.map((field) => field.name),
+      rows: lastResult?.rows ?? [],
+      rowCount: lastResult?.rowCount ?? lastResult?.rows?.length ?? 0,
+      fields: (lastResult?.fields ?? []).map((field) => field.name),
     };
   }
 
